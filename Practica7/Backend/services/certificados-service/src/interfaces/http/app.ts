@@ -20,9 +20,15 @@ const ESTADO_A_NUMERO: Record<EstadoCredencial, number> = {
 
 function cors(origenes: string[]) {
   const permitidos = new Set(origenes);
+  // `*` habilita cualquier origen. Sin esta comprobacion el comodin se
+  // comparaba literalmente contra el Origin de la peticion, que nunca es la
+  // cadena "*", y el navegador descartaba la respuesta sin avisar.
+  const cualquiera = permitidos.has('*');
   return (req: Request, res: Response, next: () => void): void => {
     const origen = req.headers.origin;
-    if (origen && permitidos.has(origen)) {
+    if (cualquiera) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    } else if (origen && permitidos.has(origen)) {
       res.setHeader('Access-Control-Allow-Origin', origen);
       res.setHeader('Vary', 'Origin');
     }

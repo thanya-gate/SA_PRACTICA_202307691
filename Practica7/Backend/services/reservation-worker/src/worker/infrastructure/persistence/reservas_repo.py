@@ -47,7 +47,7 @@ class PostgresReservas(ReservaRepositorio):
     ) -> ResultadoReserva:
         with self._pool.connection() as conexion, conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT reserva_id, estado, ya_existia, codigo_validacion, titular "
+                "SELECT reserva_id, estado, ya_existia, codigo_validacion, titular, firma "
                 "FROM fn_resolver_reserva(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     solicitud.tracking_id,
@@ -73,7 +73,12 @@ class PostgresReservas(ReservaRepositorio):
         pase_persistido = (
             PaseEmitido(
                 codigo_validacion=fila["codigo_validacion"],
-                firma="",
+                # Se lee la firma de la fila y no del `pase` recibido: en una
+                # redelivery la que vale es la que quedo guardada. Dejarla fija
+                # en "" hacia que el seguimiento publicado al navegador
+                # mostrara el pase sin firma, aunque el worker lo hubiera
+                # firmado correctamente.
+                firma=fila["firma"] or "",
                 titular=fila["titular"] or solicitud.estudiante_nombre,
                 evento_id=solicitud.evento_id,
                 evento_titulo=evento_titulo,

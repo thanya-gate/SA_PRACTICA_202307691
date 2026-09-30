@@ -68,13 +68,24 @@ func requestID() gin.HandlerFunc {
 // Vercel a la IP publica de la VM, que es un origen distinto.
 func CORS(origenesPermitidos []string) gin.HandlerFunc {
 	permitidos := make(map[string]bool, len(origenesPermitidos))
+	cualquiera := false
 	for _, o := range origenesPermitidos {
+		if o == "*" {
+			cualquiera = true
+		}
 		permitidos[o] = true
 	}
 
 	return func(c *gin.Context) {
 		origen := c.GetHeader("Origin")
-		if permitidos[origen] {
+		switch {
+		// `*` habilita cualquier origen. Sin esta rama el comodin se
+		// comparaba literalmente contra el Origin de la peticion, que nunca
+		// es la cadena "*", y el navegador se comia la respuesta entera sin
+		// que el servicio devolviera nada util.
+		case cualquiera:
+			c.Header("Access-Control-Allow-Origin", "*")
+		case permitidos[origen]:
 			c.Header("Access-Control-Allow-Origin", origen)
 			c.Header("Vary", "Origin")
 		}

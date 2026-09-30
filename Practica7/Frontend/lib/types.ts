@@ -62,3 +62,17 @@ export class MockApiError extends Error {
     this.name = 'MockApiError';
   }
 }
+
+/**
+ * Pases que el worker emite despues de reclamar el cupo. `validationCode` y
+ * `signature` son el par que la pagina de verificacion contrasta contra la
+ * credencial almacenada en el Servicio de Certificados.
+ */
+export interface IssuedTicket {
+  ticketId: string;
+  validationCode: string;
+  signature: string;
+  issuedAt: string;
+  eventTitle: string;
+  holder: string;
+}

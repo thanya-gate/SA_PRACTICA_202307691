@@ -148,11 +148,11 @@ describe('CatalogoDeTalleres', () => {
 });
 
 describe('API HTTP del catalogo', () => {
-  function app() {
+  function app(origenesPermitidos: string[] = ['https://academix.vercel.app']) {
     const { servicio, repositorio, cache } = armar();
     return crearAplicacionHttp(servicio, {
       version: '2.0.0',
-      origenesPermitidos: ['https://academix.vercel.app'],
+      origenesPermitidos,
       postgres: repositorio,
       cache,
     });
@@ -164,6 +164,38 @@ describe('API HTTP del catalogo', () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(2);
     expect(res.body.eventos[0].estado).toBe(1);
+  });
+
+  it('devuelve Access-Control-Allow-Origin al origen permitido', async () => {
+    const res = await request(app())
+      .get('/api/talleres/eventos')
+      .set('Origin', 'https://academix.vercel.app');
+
+    expect(res.headers['access-control-allow-origin']).toBe('https://academix.vercel.app');
+  });
+
+  it('omite Access-Control-Allow-Origin para un origen desconocido', async () => {
+    const res = await request(app())
+      .get('/api/talleres/eventos')
+      .set('Origin', 'https://sitio-malicioso.example');
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  // El compose deja el origen permitido en "*" cuando no se define. Tratar ese
+  // comodin como cadena literal hacia que ningun navegador obtuviera el
+  // encabezado, y la respuesta se descartaba sin dejar rastro.
+  it('el comodin habilita cualquier origen', async () => {
+    const api = app(['*']);
+
+    for (const origen of [
+      'https://academix.vercel.app',
+      'http://localhost:3000',
+      'https://otro-anything.example',
+    ]) {
+      const res = await request(api).get('/api/talleres/eventos').set('Origin', origen);
+      expect(res.headers['access-control-allow-origin']).toBe('*');
+    }
   });
 
   it('GET /api/talleres/eventos/:id responde 404 si no existe', async () => {

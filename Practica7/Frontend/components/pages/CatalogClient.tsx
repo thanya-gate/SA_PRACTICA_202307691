@@ -1,12 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { AppShell, MockContractNote, PageIntro } from '@/components/AppShell';
+import { AppShell, ContractNote, PageIntro } from '@/components/AppShell';
 import { EmptyState, ErrorState, LoadingState } from '@/components/Feedback';
 import { EventCard } from '@/components/EventCard';
-import { listEvents } from '@/lib/mock-api';
-import type { EventSummary } from '@/lib/types';
+import { listarEventos, type EventoResumen } from '@/lib/api/academix-api';
+import { apiConfig, hostLegible } from '@/lib/config';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -14,20 +13,21 @@ function errorMessage(error: unknown): string {
 }
 
 export function CatalogClient() {
-  const searchParams = useSearchParams();
-  const scenario = searchParams.get('scenario') ?? undefined;
   const [query, setQuery] = useState('');
-  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [events, setEvents] = useState<EventoResumen[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [origenCache, setOrigenCache] = useState(false);
 
   const loadEvents = useCallback((search: string) => {
     let active = true;
     setLoading(true);
     setError(null);
-    void listEvents(search, scenario)
-      .then((result) => {
-        if (active) setEvents(result);
+    void listarEventos(search)
+      .then((resultado) => {
+        if (!active) return;
+        setEvents(resultado.eventos);
+        setOrigenCache(resultado.origenCache);
       })
       .catch((reason: unknown) => {
         if (active) {
@@ -41,7 +41,7 @@ export function CatalogClient() {
     return () => {
       active = false;
     };
-  }, [scenario]);
+  }, []);
 
   useEffect(() => loadEvents(''), [loadEvents]);
 
@@ -75,7 +75,9 @@ export function CatalogClient() {
           <button className="button button--secondary catalog-search__button" type="submit">
             Filtrar
           </button>
-          <span className="catalog-search__source">Datos de catálogo · mock</span>
+          <span className="catalog-search__source">
+            {origenCache ? 'Catálogo · caché Redis' : 'Catálogo · PostgreSQL'} · {hostLegible(apiConfig.catalogo)}
+          </span>
         </form>
 
         {loading && <LoadingState label="Cargando eventos…" />}
@@ -89,7 +91,9 @@ export function CatalogClient() {
           </div>
         )}
 
-        <MockContractNote>Los eventos se muestran desde el contrato mock GET /mock/events.</MockContractNote>
+        <ContractNote>
+          GET {hostLegible(apiConfig.catalogo)}/api/talleres/eventos · Servicio de Catálogo de Talleres (TypeScript).
+        </ContractNote>
       </section>
     </AppShell>
   );

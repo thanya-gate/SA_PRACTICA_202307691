@@ -70,7 +70,11 @@ CREATE OR REPLACE FUNCTION fn_resolver_reserva(
     estado            TEXT,
     ya_existia       BOOLEAN,
     codigo_validacion TEXT,
-    titular           TEXT
+    titular           TEXT,
+    -- La firma se devuelve leida de `ticket_pase`, no del parametro de
+    -- entrada: si el pase ya existia por una redelivery, lo que vale es la
+    -- firma que quedo guardada, no la que trae el mensaje reintentado.
+    firma             TEXT
 )
 -- Esta funcion devuelve `codigo_validacion` como columna de salida y ademas
 -- consulta la columna del mismo nombre de `ticket_pase`. Con la regla por
@@ -127,7 +131,8 @@ BEGIN
            r.estado,
            v_ya_existia,
            t.codigo_validacion,
-           t.titular
+           t.titular,
+           t.firma
       FROM reserva r
       LEFT JOIN ticket_pase t ON t.reserva_id = r.reserva_id
      WHERE r.tracking_id = p_tracking_id;

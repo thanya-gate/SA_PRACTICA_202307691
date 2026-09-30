@@ -20,13 +20,21 @@ import (
 const origenVercel = "https://academix-pass.vercel.app"
 
 func nuevoRouterDePrueba(broker *messaging.BrokerEnMemoria, cacheEstado *cache.EstadoCacheEnMemoria) *gin.Engine {
+	return nuevoRouterConOrigenes(broker, cacheEstado, origenVercel)
+}
+
+func nuevoRouterConOrigenes(
+	broker *messaging.BrokerEnMemoria,
+	cacheEstado *cache.EstadoCacheEnMemoria,
+	origenes string,
+) *gin.Engine {
 	manejador := restapi.NuevoManejador(
 		application.NuevoSolicitarReserva(broker, trackingFijo{valor: "TRK-HTTP-1"}, relojFijo{}),
 		application.NuevoConsultarEstado(cacheEstado),
 		nil,
 		"2.0.0-test",
 	)
-	return restapi.NuevoRouter(manejador, restapi.OrigenesPermitidos(origenVercel))
+	return restapi.NuevoRouter(manejador, restapi.OrigenesPermitidos(origenes))
 }
 
 func TestPostReservasDevuelve202Accepted(t *testing.T) {
@@ -154,6 +162,31 @@ func TestCORSRechazaOrigenDesconocido(t *testing.T) {
 
 	if origen := rec.Header().Get("Access-Control-Allow-Origin"); origen != "" {
 		t.Errorf("no se debe devolver el encabezado para origenes no permitidos, se obtuvo %q", origen)
+	}
+}
+
+// El compose deja CORS_ORIGENES en "*" cuando no se define. Ese comodin tiene
+// que abrir la puerta a cualquier origen: tratado como cadena literal nunca
+// coincide con el Origin real y el navegador rechaza la respuesta sin que el
+// servicio llegue a responder nada.
+func TestCORSComodinPermiteCualquierOrigen(t *testing.T) {
+	router := nuevoRouterConOrigenes(
+		messaging.NuevoBrokerEnMemoria(),
+		cache.NuevoEstadoCacheEnMemoria(),
+		"*",
+	)
+
+	origenes := []string{origenVercel, "http://localhost:3000", "https://otro-anything.example"}
+	for _, origen := range origenes {
+		req := httptest.NewRequest(http.MethodOptions, "/api/reservas", nil)
+		req.Header.Set("Origin", origen)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		if permitido := rec.Header().Get("Access-Control-Allow-Origin"); permitido != "*" {
+			t.Errorf("con el comodin, el origen %q recibio %q, se esperaba \"*\"", origen, permitido)
+		}
 	}
 }
 
