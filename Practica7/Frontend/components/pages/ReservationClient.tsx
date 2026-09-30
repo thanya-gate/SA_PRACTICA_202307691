@@ -3,16 +3,30 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AppShell, MockContractNote, PageIntro } from '@/components/AppShell';
+import { AppShell, ContractNote, PageIntro } from '@/components/AppShell';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { FormField } from '@/components/FormField';
 import { ReservationSummary } from '@/components/ReservationSummary';
-import { createReservation, getEvent } from '@/lib/mock-api';
-import type { EventDetail } from '@/lib/types';
+import { obtenerEvento, solicitarReserva, type EventoCompleto } from '@/lib/api/academix-api';
+import { apiConfig, hostLegible } from '@/lib/config';
 
 interface FormErrors {
   studentName?: string;
   studentEmail?: string;
+}
+
+/**
+ * El productor acepta solo correos institucionales o de demostracion
+ * (`dominioPermitido` en internal/domain/reserva.go del servicio de Go).
+ * Se replica aqui para avisar antes de gastar un viaje de red, pero la regla
+ * que manda sigue siendo la del backend.
+ */
+const DOMINIOS_ACEPTADOS = ['usac.edu.gt', 'demo.test'];
+
+export function correoAceptado(correo: string): boolean {
+  const partes = correo.trim().toLocaleLowerCase('es').split('@');
+  if (partes.length !== 2) return false;
+  return DOMINIOS_ACEPTADOS.some((dominio) => partes[1].endsWith(dominio));
 }
 
 function errorMessage(error: unknown): string {
@@ -24,11 +38,11 @@ export function ReservationClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const eventId = searchParams.get('eventId') ?? '';
-  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [event, setEvent] = useState<EventoCompleto | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(Boolean(eventId));
   const [eventError, setEventError] = useState<string | null>(eventId ? null : 'No se indicó un evento válido.');
   const [studentName, setStudentName] = useState('Estudiante de prueba');
-  const [studentEmail, setStudentEmail] = useState('estudiante@ejemplo.com');
+  const [studentEmail, setStudentEmail] = useState('estudiante@usac.edu.gt');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -42,7 +56,7 @@ export function ReservationClient() {
     let active = true;
     setLoadingEvent(true);
     setEventError(null);
-    void getEvent(eventId)
+    void obtenerEvento(eventId)
       .then((result) => {
         if (active) setEvent(result);
       })
@@ -65,8 +79,14 @@ export function ReservationClient() {
   function validate(): FormErrors {
     const nextErrors: FormErrors = {};
     if (!studentName.trim()) nextErrors.studentName = 'Ingresa el nombre completo.';
-    if (!studentEmail.trim()) nextErrors.studentEmail = 'Ingresa un correo electrónico.';
-    else if (!/^\S+@\S+\.\S+$/.test(studentEmail.trim())) nextErrors.studentEmail = 'Ingresa un correo válido.';
+    else if (studentName.trim().length < 3) nextErrors.studentName = 'El nombre debe tener al menos 3 caracteres.';
+
+    const correo = studentEmail.trim();
+    if (!correo) nextErrors.studentEmail = 'Ingresa un correo electrónico.';
+    else if (!/^\S+@\S+\.\S+$/.test(correo)) nextErrors.studentEmail = 'Ingresa un correo válido.';
+    else if (!correoAceptado(correo)) {
+      nextErrors.studentEmail = 'Usa un correo institucional (usac.edu.gt) o de demostración (demo.test).';
+    }
     return nextErrors;
   }
 
@@ -79,12 +99,17 @@ export function ReservationClient() {
 
     setSubmitting(true);
     try {
-      const reservation = await createReservation({
+      /**
+       * La respuesta es 202 Accepted: la solicitud ya esta en RabbitMQ y el
+       * cupo lo decidira el worker. No hay boleto todavia, por eso lo que se
+       * lleva a la siguiente pantalla es el identificador de seguimiento.
+       */
+      const aceptada = await solicitarReserva({
         eventId: event.eventId,
         studentName: studentName.trim(),
         studentEmail: studentEmail.trim(),
       });
-      router.push(`/reservas?reservationId=${encodeURIComponent(reservation.reservationId)}`);
+      router.push(`/reservas?trackingId=${encodeURIComponent(aceptada.trackingId)}`);
     } catch (reason: unknown) {
       setSubmitError(errorMessage(reason));
     } finally {
@@ -106,7 +131,7 @@ export function ReservationClient() {
           <span aria-hidden="true">›</span>
           <span className="stepper__step">2 Datos</span>
           <span aria-hidden="true">›</span>
-          <span className="stepper__step">3 Resultado</span>
+          <span className="stepper__step">3 Seguimiento</span>
         </div>
 
         {loadingEvent && <LoadingState label="Preparando la solicitud…" />}
@@ -145,14 +170,17 @@ export function ReservationClient() {
                   Cancelar
                 </Link>
                 <button className="button button--primary" type="submit" disabled={submitting || event.availableSeats === 0}>
-                  {submitting ? 'Enviando…' : 'Enviar solicitud'}
+                  {submitting ? 'Enviando a la cola…' : 'Enviar solicitud'}
                 </button>
               </div>
             </form>
           </div>
         )}
 
-        <MockContractNote>El frontend usa POST /mock/reservations y no se conecta directamente con RabbitMQ.</MockContractNote>
+        <ContractNote>
+          POST {hostLegible(apiConfig.reservas)}/api/reservas → 202 Accepted. El cupo lo reclama el worker
+          asíncrono; el navegador no publica en RabbitMQ.
+        </ContractNote>
       </section>
     </AppShell>
   );

@@ -1,0 +1,192 @@
+# =====================================================================
+# .gitignore de raiz - Practicas 1 a 8
+# =====================================================================
+# Este archivo protege a TODAS las carpetas de practicas. Cada practica
+# tiene ademas su propio .gitignore cuando necesita reglas mas
+# específicas; estos solo se aplican si la carpeta llega a versionarse.
+#
+# Que se versiona: codigo fuente, contratos .proto, stubs gRPC
+# generados (gen/), package.json, package-lock.json, requirements.txt,
+# go.mod, go.sum, Dockerfiles, docker-compose*.yml, .drawio, .md.
+# Que NO se versiona: dependencias instaladas, compilados, caches,
+# secretos y archivos de entorno local.
+
+# ---------------------------------------------------------------------
+# Dependencias de Node
+# ---------------------------------------------------------------------
+# `npm install` reconstruye esto desde package-lock.json. Subirlo son
+# ~130 MB por servicio y Git no lo deduplica: cada cambio genera un
+# blob nuevo y el repositorio crece sin limite.
+node_modules/
+
+# Gestores de paquetes alternativos
+.pnp/
+.pnp.js
+
+# Yarn / pnpm (por si algun servicio los usa en el futuro)
+.yarn/
+.yarn/cache
+.yarn/install-state.gz
+.pnpm-store/
+
+# ---------------------------------------------------------------------
+# Dependencias de Python
+# ---------------------------------------------------------------------
+# `pip install -r requirements.txt` las reconstruye.
+.venv/
+venv/
+env/
+ENV/
+
+# Instalaciones a nivel de sistema (pip --user, sudo pip)
+site-packages/
+
+# ---------------------------------------------------------------------
+# Artefactos de compilacion
+# ---------------------------------------------------------------------
+# TypeScript / Next.js: `npm run build` los regenera.
+dist/
+build/
+out/
+.next/
+.nuxt/
+.turbo/
+*.tsbuildinfo
+
+# Go: `go build` produce el binario junto al paquete.
+# El nombre generico `reservas-service` cubre el producto del Dockerfile.
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+# Binario del productor de reservas
+/reservas-service
+**/reservas-service.exe
+
+# Python compilado
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# ---------------------------------------------------------------------
+# Caches de herramientas y tests
+# ---------------------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.hypothesis/
+
+# Next.js / Vite / framework de test
+.nyc_output/
+coverage/
+coverage-final.json
+lib-cov/
+.jest-cache/
+
+# Storybook / Playwright / Cypress
+storybook-static/
+playwright-report/
+test-results/
+cypress/screenshots/
+cypress/videos/
+
+# ---------------------------------------------------------------------
+# Entornos y secretos
+# ---------------------------------------------------------------------
+# Los archivos .env.example SI se versionan (documentan que variables
+# necesita el servicio). Los .env reales NUNCA.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Certificados y claves privadas
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa
+id_rsa.pub
+
+# ---------------------------------------------------------------------
+# Logs, temporales y archivos del sistema
+# ---------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+.\#*
+\#*\#
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.AppleDouble
+.LSOverride
+Icon?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Editores
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------
+# Datos locales de pruebas
+# ---------------------------------------------------------------------
+# No se versionan dumps ni bases de datos locales.
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+
+# ---------------------------------------------------------------------
+# Kubernetes
+# ---------------------------------------------------------------------
+# Los manifiestos de deploy/k8s SI se versionan. Se ignoran solo los
+# recursos generados localmente por kubectl/helm.
+deploy/k8s/*-release.yaml
+kustomization.yaml.bak
+*.kubeconfig
+.kube/
+
+# ---------------------------------------------------------------------
+# Docker Compose
+# ---------------------------------------------------------------------
+# Los docker-compose.yml y docker-compose.dev.yml SI se versionan.
+# Se ignoran solo los artefactos que genera la construccion local.
+docker-compose.override.local.yml
+.docker/

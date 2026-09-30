@@ -1,30 +1,29 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CredentialClient } from '@/components/pages/CredentialClient';
-import { verifyCredential } from '@/lib/mock-api';
+import { verificarCredencial } from '@/lib/api/academix-api';
 
 let mockSearchParams = new URLSearchParams();
-let mockPathname = '/verificar';
 
 jest.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
-  usePathname: () => mockPathname,
+  usePathname: () => '/verificar',
 }));
 
-jest.mock('@/lib/mock-api', () => ({
-  verifyCredential: jest.fn(),
+jest.mock('@/lib/api/academix-api', () => ({
+  verificarCredencial: jest.fn(),
 }));
 
-const mockedVerifyCredential = jest.mocked(verifyCredential);
+const mockedVerificarCredencial = jest.mocked(verificarCredencial);
 
 describe('Verificación de credencial', () => {
   beforeEach(() => {
     mockSearchParams = new URLSearchParams();
-    mockedVerifyCredential.mockReset();
+    mockedVerificarCredencial.mockReset();
   });
 
   it('muestra una credencial válida y sus datos públicos', async () => {
-    mockedVerifyCredential.mockResolvedValue({
+    mockedVerificarCredencial.mockResolvedValue({
       identifier: 'CERT-2026-000742',
       status: 'VÁLIDA',
       title: 'Taller de Arquitectura SOA',
@@ -48,11 +47,11 @@ describe('Verificación de credencial', () => {
     await user.click(screen.getByRole('button', { name: 'Verificar' }));
 
     expect(screen.getByText(/Usa entre 6 y 64 caracteres/)).toBeInTheDocument();
-    expect(mockedVerifyCredential).not.toHaveBeenCalled();
+    expect(mockedVerificarCredencial).not.toHaveBeenCalled();
   });
 
   it('muestra estados no encontrada y error del servicio', async () => {
-    mockedVerifyCredential.mockResolvedValueOnce({
+    mockedVerificarCredencial.mockResolvedValueOnce({
       identifier: 'CERT-NO-ENCONTRADA',
       status: 'NO_ENCONTRADA',
       title: 'Credencial no encontrada',
@@ -65,7 +64,7 @@ describe('Verificación de credencial', () => {
     expect(await screen.findByText('Credencial no encontrada')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Nueva consulta' }));
-    mockedVerifyCredential.mockRejectedValueOnce(new Error('Servicio no disponible.'));
+    mockedVerificarCredencial.mockRejectedValueOnce(new Error('Servicio no disponible.'));
     await user.type(screen.getByLabelText('Identificador o hash'), 'CERT-ERROR');
     await user.click(screen.getByRole('button', { name: 'Verificar' }));
     expect(await screen.findByText('Servicio no disponible.')).toBeInTheDocument();
