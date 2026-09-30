@@ -1,0 +1,48 @@
+# =====================================================================
+# reservas-service (Go) - productor asincrono
+# =====================================================================
+# Etapa 1: compilar el binario estatico. Se construye fuera del runtime
+# final para que la imagen final no arrastre el toolchain de Go.
+FROM golang:1.25-alpine AS compilador
+
+WORKDIR /src
+
+# Primero solo go.mod/go.sum: mientras no cambien, Docker reutiliza la capa
+# de descarga de dependencias y las reconstrucciones son mucho mas rapidas.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# CGO_ENABLED=0 produce un binario estatico que corre sobre scratch.
+# -trimpath quita rutas locales del binario y -ldflags "-s -w" lo reduce.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /out/reservas-service \
+    ./cmd/reservas-service
+
+# Etapa 2: imagen minima de ejecucion.
+FROM alpine:3.20
+
+# ca-certificates para HTTPS hacia Vercel/Cloudflare; tzdata para que los
+# logs usen la zona horaria local en vez de UTC.
+RUN apk add --no-cache ca-certificates tzdata wget \
+    && addgroup -S academix \
+    && adduser -S -G academix academix
+
+WORKDIR /app
+COPY --from=compilador /out/reservas-service /app/reservas-service
+COPY proto /app/proto
+
+USER academix
+EXPOSE 8080 50060
+
+# El healthcheck consulta el mismo endpoint que usa el balanceador, de modo
+# que un contenedor "sano" es un contenedor que ademas responde.
+# La ruta es /api/salud (no /api/reservas/salud): las de reservas viven bajo
+# /api/reservas y las de estado bajo /api/reservas/:trackingId/estado.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/api/salud || exit 1
+
+ENTRYPOINT ["/app/reservas-service"]
