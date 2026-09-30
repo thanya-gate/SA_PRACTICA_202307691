@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package academix.reservas.v1;
+
+option go_package = "github.com/yousac/academix-pass/backend/gen/reservasv1;reservasv1";
+
+import "eventos.proto";
+
+// Servicio de Reservas / Ticketing (PRODUCTOR).
+// Recibe la peticion desde Vercel, valida sintacticamente, genera un
+// identificador de seguimiento, publica el evento en el broker y responde
+// 202 Accepted sin esperar a la base de datos.
+//
+// NO abre conexiones a la base de datos de reservas: la unica escritura
+// persistente la realiza reservation-worker. Este servicio es stateless.
+
+service ReservasService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc SolicitarReserva(SolicitarReservaRequest) returns (SolicitarReservaResponse);
+  rpc ConsultarEstado(ConsultarEstadoRequest) returns (ConsultarEstadoResponse);
+  rpc MetricasProductor(MetricasRequest) returns (MetricasResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string estado = 1;
+  string version = 2;
+  string dependencia_broker = 3;
+  string cola = 4;
+  bool broker_confirmado = 5;
+}
+
+message SolicitarReservaRequest {
+  string evento_id = 1;
+  string estudiante_nombre = 2;
+  string estudiante_correo = 3;
+  string canal = 4;
+}
+
+message SolicitarReservaResponse {
+  // tracking_id es el identificador de seguimiento devuelto al cliente.
+  string tracking_id = 1;
+  string estado = 2;
+  string mensaje = 3;
+  string url_seguimiento = 4;
+}
+
+message ConsultarEstadoRequest {
+  string tracking_id = 1;
+}
+
+message ConsultarEstadoResponse {
+  string tracking_id = 1;
+  string reserva_id = 2;
+  string estado = 3;
+  string mensaje = 4;
+  academix.eventos.v1.TicketPase ticket = 5;
+  string procesado_en = 6;
+  bool encontrado = 7;
+}
+
+message MetricasRequest {}
+
+message MetricasResponse {
+  int64 publicadas = 1;
+  int64 confirmadas_broker = 2;
+  int64 rechazadas_broker = 3;
+  int64 duplicadas = 4;
+}

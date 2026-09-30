@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package academix.catalogo.v1;
+
+option go_package = "github.com/yousac/academix-pass/backend/gen/catalogov1;catalogov1";
+
+// Servicio de Catalogo de Talleres.
+// Expone la lista de eventos, catedráticos ponentes y cupos en tiempo real.
+// Responde por HTTP (borde norte-sur) y por gRPC (comunicacion este-oeste).
+
+service CatalogoService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+
+  rpc ListarEventos(ListarEventosRequest) returns (ListarEventosResponse);
+  rpc ObtenerEvento(ObtenerEventoRequest) returns (ObtenerEventoResponse);
+
+  // Consumido por el worker antes de abrir la transaccion atomica de cupo.
+  rpc ValidarEvento(ValidarEventoRequest) returns (ValidarEventoResponse);
+  rpc ConsultarDisponibilidad(ConsultarDisponibilidadRequest) returns (DisponibilidadResponse);
+  rpc InvalidarCache(InvalidarCacheRequest) returns (InvalidarCacheResponse);
+
+  // Unica operacion que descuenta cupo. Se ejecuta dentro de una transaccion
+  // con SELECT ... FOR UPDATE sobre la fila del evento, de modo que N workers
+  // concurrentes nunca sobre-reservan. El worker la invoca por gRPC: de esa
+  // forma catalogo-service conserva la propiedad exclusiva de su base de datos.
+  rpc ReclamarCupo(ReclamarCupoRequest) returns (ReclamarCupoResponse);
+  rpc LiberarCupo(LiberarCupoRequest) returns (LiberarCupoResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string estado = 1;
+  string version = 2;
+  string dependencia_postgres = 3;
+  string dependencia_redis = 4;
+  string cache_operativo = 5;
+}
+
+enum EstadoEvento {
+  ESTADO_EVENTO_NO_ESPECIFICADO = 0;
+  PROGRAMADO = 1;
+  EN_CURSO = 2;
+  FINALIZADO = 3;
+  CANCELADO = 4;
+}
+
+message ListarEventosRequest {
+  string busqueda = 1;
+  int32 limite = 2;
+  int32 offset = 3;
+  bool solo_con_cupo = 4;
+}
+
+message ListarEventosResponse {
+  repeated EventoResumen eventos = 1;
+  int32 total = 2;
+  bool origen_cache = 3;
+}
+
+message ObtenerEventoRequest {
+  string evento_id = 1;
+}
+
+message ObtenerEventoResponse {
+  EventoDetalle evento = 1;
+  bool origen_cache = 2;
+}
+
+message EventoResumen {
+  string evento_id = 1;
+  string titulo = 2;
+  string curso = 3;
+  string ponente = 4;
+  string fecha = 5;
+  string modalidad = 6;
+  int32 cupos_disponibles = 7;
+  int32 cupos_totales = 8;
+  EstadoEvento estado = 9;
+}
+
+message EventoDetalle {
+  string evento_id = 1;
+  string titulo = 2;
+  string curso = 3;
+  string ponente = 4;
+  string correo_ponente = 5;
+  string fecha = 6;
+  string modalidad = 7;
+  string descripcion = 8;
+  repeated string prerrequisitos = 9;
+  int32 cupos_disponibles = 10;
+  int32 cupos_totales = 11;
+  EstadoEvento estado = 12;
+}
+
+message ValidarEventoRequest {
+  string evento_id = 1;
+}
+
+message ValidarEventoResponse {
+  bool existe = 1;
+  bool admite_reserva = 2;
+  string titulo = 3;
+  EstadoEvento estado = 4;
+  string motivo = 5;
+}
+
+message ConsultarDisponibilidadRequest {
+  string evento_id = 1;
+}
+
+message DisponibilidadResponse {
+  string evento_id = 1;
+  int32 cupos_disponibles = 2;
+  int32 cupos_totales = 3;
+  bool admite_reserva = 4;
+}
+
+message InvalidarCacheRequest {
+  string evento_id = 1;
+}
+
+message InvalidarCacheResponse {
+  bool invalidado = 1;
+}
+
+message ReclamarCupoRequest {
+  string evento_id = 1;
+  string reserva_id = 2;
+  string tracking_id = 3;
+}
+
+enum ResultadoCupo {
+  RESULTADO_CUPO_NO_ESPECIFICADO = 0;
+  CUPO_ASIGNADO = 1;
+  SIN_CUPO = 2;
+  EVENTO_INEXISTENTE = 3;
+  EVENTO_CERRADO = 4;
+  YA_OCUPADO = 5;
+}
+
+message ReclamarCupoResponse {
+  ResultadoCupo resultado = 1;
+  int32 cupos_disponibles = 2;
+  int32 cupos_totales = 3;
+  string titulo = 4;
+  string mensaje = 5;
+}
+
+message LiberarCupoRequest {
+  string evento_id = 1;
+  string reserva_id = 2;
+}
+
+message LiberarCupoResponse {
+  bool liberado = 1;
+  int32 cupos_disponibles = 2;
+}
