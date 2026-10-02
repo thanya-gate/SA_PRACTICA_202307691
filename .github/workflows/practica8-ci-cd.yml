@@ -173,6 +173,9 @@ jobs:
       - build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.VM_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v7
       - name: Validar configuración de despliegue
@@ -182,10 +185,8 @@ jobs:
           VM_DEPLOY_PATH: ${{ secrets.VM_DEPLOY_PATH }}
           VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           VM_SSH_KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
-          for name in VM_HOST VM_USER VM_DEPLOY_PATH VM_SSH_PRIVATE_KEY VM_SSH_KNOWN_HOSTS GHCR_USERNAME GHCR_READ_TOKEN; do
+          for name in VM_HOST VM_USER VM_DEPLOY_PATH VM_SSH_PRIVATE_KEY VM_SSH_KNOWN_HOSTS; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Falta configurar el secret $name. Revisa Practica7/DEPLOYMENT.md."
               exit 1
@@ -214,6 +215,8 @@ jobs:
           ssh -p "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "mkdir -p '$VM_DEPLOY_PATH/Backend'"
           scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
             Practica7/docker-compose.yml "$remote:$VM_DEPLOY_PATH/docker-compose.yml"
+          scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            Practica7/Caddyfile.vm "$remote:$VM_DEPLOY_PATH/Caddyfile"
           scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes -r \
             Practica7/Backend/sql "$remote:$VM_DEPLOY_PATH/Backend/"
       - name: Autenticar la VM en GHCR
@@ -221,8 +224,8 @@ jobs:
           VM_HOST: ${{ secrets.VM_HOST }}
           VM_USER: ${{ secrets.VM_USER }}
           VM_SSH_PORT: ${{ vars.VM_SSH_PORT }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           port="${VM_SSH_PORT:-22}"
@@ -240,5 +243,15 @@ jobs:
         run: |
           port="${VM_SSH_PORT:-22}"
           ssh -p "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$VM_USER@$VM_HOST" \
-            "cd '$VM_DEPLOY_PATH' && test -f .env && export IMAGE_TAG='$IMAGE_TAG' && docker compose config -q && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"
+          "$VM_USER@$VM_HOST" \
+            "trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT; cd '$VM_DEPLOY_PATH' && test -f .env && test -f Caddyfile && export IMAGE_TAG='$IMAGE_TAG' && docker compose config -q && docker compose pull && docker compose up -d --remove-orphans && docker compose up -d --force-recreate academix-gateway && docker compose ps"
+      - name: Verificar APIs por HTTPS
+        env:
+          API_DOMAIN: 136.119.139.125.sslip.io
+        run: |
+          for path in reservas/api/salud catalogo/api/talleres/salud certificados/api/certificados/salud; do
+            echo "Verificando https://$API_DOMAIN/$path"
+            curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors \
+              --output /dev/null --write-out 'HTTP %{http_code}\n' \
+              "https://$API_DOMAIN/$path"
+          done

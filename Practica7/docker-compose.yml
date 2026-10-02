@@ -7,9 +7,7 @@
 # La VM no compila nada; unicamente descarga imagenes ya publicadas en el
 # Container Registry. El ciclo completo es:
 #
-#     push a develop  ->  GitHub Actions  ->  docker compose up -d --build
-#                                             en el runner (SI compila)
-#                     ->  push al Registry
+#     push a develop  ->  GitHub Actions compila con Buildx y publica imagenes
 #                     ->  SSH a la VM  ->  docker compose pull
 #                                       ->  docker compose up -d
 #
@@ -300,6 +298,27 @@ services:
     restart: unless-stopped
     networks: [academix]
 
+  # Proxy HTTPS de las APIs. Usa la red host para llegar a los puertos de
+  # localhost de este Compose sin ocupar el Caddy HTTP ya existente de YouSAC.
+  academix-gateway:
+    image: caddy:2-alpine
+    container_name: academix-gateway
+    network_mode: host
+    environment:
+      TZ: America/Guatemala
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-datos:/data
+      - caddy-config:/config
+    depends_on:
+      catalogo-service:
+        condition: service_started
+      certificados-service:
+        condition: service_started
+      reservas-service:
+        condition: service_started
+    restart: unless-stopped
+
 # =====================================================================
 # Volumenes: sin ellos, los mensajes y las reservas viven en el capa de
 # escritura del contenedor y se pierden al recrearlo. La durabilidad de la
@@ -311,3 +330,5 @@ volumes:
   postgres-catalogo-datos:
   postgres-reservas-datos:
   postgres-credenciales-datos:
+  caddy-datos:
+  caddy-config:

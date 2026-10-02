@@ -13,9 +13,13 @@ El frontend no se convierte en imagen: Vercel conserva su propio despliegue.
   completo.
 - En un tag Git como `V2.0.0`, publica también la versión formal `2.0.0`.
 - El job de despliegue a la VM se habilita cuando la variable de repositorio
-  `VM_DEPLOY_ENABLED` vale `true`. Copia el Compose y los scripts SQL, descarga
-  el tag de ese commit y ejecuta `docker compose up -d`; la VM no construye
-  imágenes.
+  `VM_DEPLOY_ENABLED` vale `true`. Copia Compose, Caddyfile y scripts SQL,
+  descarga el tag de ese commit y ejecuta `docker compose up -d`; la VM no
+  construye imágenes.
+- El job usa el `GITHUB_TOKEN` efímero con permiso `packages: read` para que la
+  VM descargue imágenes; no necesita un PAT permanente de GHCR.
+- La VM comparte recursos con otra aplicación. Los puertos de Academix se
+  ligan a `127.0.0.1`; un gateway Caddy propio publica HTTPS en el puerto 443.
 
 ## Configuración de GitHub
 
@@ -31,33 +35,36 @@ Actions**:
 | Secret | `VM_DEPLOY_PATH` | Ruta absoluta en la VM, sin espacios; por ejemplo `/opt/academix-pass`. |
 | Secret | `VM_SSH_PRIVATE_KEY` | Llave privada SSH de despliegue. |
 | Secret | `VM_SSH_KNOWN_HOSTS` | Clave de host de la VM, verificada y en formato `known_hosts`. |
-| Secret | `GHCR_USERNAME` | Usuario de GitHub dueño del token de lectura del Registry. |
-| Secret | `GHCR_READ_TOKEN` | Token de solo lectura de paquetes (`read:packages`) autorizado para estas imágenes. |
 
 La ejecución de GitHub Actions necesita permiso para publicar paquetes en el
-repositorio. El workflow ya otorga `packages: write` al job que publica las
-imágenes y usa `GITHUB_TOKEN`; la VM usa el token separado de lectura.
+repositorio. El workflow otorga `packages: write` al job que publica las
+imágenes y `packages: read` al job de despliegue; ambos usan `GITHUB_TOKEN`.
 
 ## Preparar la VM
 
-1. Instalar Docker Engine y el plugin `docker compose`; permitir que `VM_USER`
-   ejecute Docker sin interacción.
-2. Crear `VM_DEPLOY_PATH` y colocar allí un `.env` propio de la VM. El archivo
-   versionado [.env.vm.example](.env.vm.example) es una plantilla: sustituir
-   las contraseñas, la clave de firma y el origen CORS de Vercel antes del
-   primer despliegue.
-3. Abrir SSH y únicamente los puertos HTTP/API que se hayan decidido publicar.
-   La configuración actual de Compose publica también puertos de bases de
-   datos, Redis y administración de RabbitMQ; restringirlos con firewall o
-   ajustar su exposición antes de poner la VM en Internet.
-4. Configurar DNS y TLS para el backend. Vercel sirve sobre HTTPS y el
-   navegador no podrá consumir endpoints del backend publicados solamente por
-   HTTP. Luego, colocar el origen exacto de Vercel en `CORS_ORIGENES`.
-5. Verificar que el usuario de despliegue pueda acceder a GHCR con el token de
-   solo lectura. El workflow detiene el despliegue si falta el `.env` o si
-   `docker compose config` no puede resolver la configuración.
+1. Crear `VM_DEPLOY_PATH` y permitir que `VM_USER` ejecute Docker sin
+   interacción.
+2. Colocar allí un `.env` propio de la VM. El archivo versionado
+   [.env.vm.example](.env.vm.example) es una plantilla con puertos aislados y
+   ligados a localhost; sustituir contraseñas y clave de firma.
+3. La VM ya usa el puerto 80 para YouSAC. El gateway de Academix usa `host`
+   networking y escucha únicamente en 443, con TLS-ALPN para validar el
+   certificado sin modificar ni reiniciar el Caddy de YouSAC.
+4. El gateway sirve las APIs por HTTPS bajo
+   `https://136.119.139.125.sslip.io/{catalogo,reservas,certificados}`. El
+   subdominio `sslip.io` resuelve a la IP actual de la VM; si cambia, actualizar
+   `Caddyfile.vm`, las variables de Vercel y volver a desplegar.
+5. En Vercel configurar para Production:
+   `NEXT_PUBLIC_API_CATALOGO_BASE=https://136.119.139.125.sslip.io/catalogo`,
+   `NEXT_PUBLIC_API_RESERVAS_BASE=https://136.119.139.125.sslip.io/reservas` y
+   `NEXT_PUBLIC_API_CERTIFICADOS_BASE=https://136.119.139.125.sslip.io/certificados`.
+   Esas variables se incorporan al frontend durante el build.
+6. Publicar por firewall HTTP/HTTPS únicamente en 80/443 para el tráfico de la
+   aplicación. PostgreSQL, Redis, RabbitMQ y las APIs quedan ligados a
+   localhost. SSH se necesita para el despliegue y la administración; limitar
+   su origen según el acceso que use el equipo.
 
 El despliegue requiere que Compose y `.env` existan en la VM antes de activar
-`VM_DEPLOY_ENABLED`. Las credenciales de producción se mantienen únicamente
-en el `.env` remoto y en los secretos de GitHub; no deben añadirse al
+`VM_DEPLOY_ENABLED`. Las credenciales se mantienen únicamente en el `.env`
+remoto y la llave privada en los secretos de GitHub; no deben añadirse al
 repositorio.
