@@ -20,8 +20,9 @@
 
 name: academix-pass
 
-# El compose fija la version 2.0.0 como tag formal de las cuatro imagenes. El
-# pipeline publicara ademas un tag por commit (2.0.0-<sha>) para trazabilidad.
+# En despliegues, CI pasa IMAGE_TAG para fijar la versión construida por ese
+# commit (2.0.0-<sha>). El valor por defecto permite levantar el release formal
+# 2.0.0 manualmente. El compose de desarrollo usa sus propias imágenes locales.
 x-entorno: &entorno
   TZ: America/Guatemala
   NODE_ENV: production
@@ -166,7 +167,7 @@ services:
   # cupos en tiempo real, y es el unico que puede descontar un cupo, via
   # gRPC (nunca por HTTP desde el navegador).
   catalogo-service:
-    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/catalogo-service:2.0.0
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/catalogo-service:${IMAGE_TAG:-2.0.0}
     container_name: academix-catalogo-service
     hostname: catalogo-service
     environment:
@@ -197,7 +198,7 @@ services:
   # Dueno de postgres-credenciales. El worker le registra el pase emitido
   # por gRPC; el verificador publico lo consulta por HTTP.
   certificados-service:
-    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/certificados-service:2.0.0
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/certificados-service:${IMAGE_TAG:-2.0.0}
     container_name: academix-certificados-service
     hostname: certificados-service
     environment:
@@ -227,7 +228,7 @@ services:
   # 202 Accepted. Redis solo guarda el estado de seguimiento para que el
   # cliente pueda consultar el avance sin tocar la base.
   reservas-service:
-    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservas-service:2.0.0
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservas-service:${IMAGE_TAG:-2.0.0}
     container_name: academix-reservas-service
     hostname: reservas-service
     environment:
@@ -265,7 +266,7 @@ services:
   # persiste. Si este contenedor se apaga, la cola sigue acumulando
   # mensajes; al encenderlo los drena todos.
   reservation-worker:
-    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservation-worker:2.0.0
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservation-worker:${IMAGE_TAG:-2.0.0}
     container_name: academix-reservation-worker
     hostname: reservation-worker
     environment:
