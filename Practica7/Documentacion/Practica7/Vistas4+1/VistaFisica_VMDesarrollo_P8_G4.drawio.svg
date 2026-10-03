@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1740" height="1080" viewBox="0 0 1740 1080" role="img">
+<title>VISTA FÍSICA · PRÁCTICA 8 · VM DE DESARROLLO</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#ffffff"/></marker></defs>
+<rect width="1740" height="1080" fill="#121212"/>
+<rect x="12" y="16" width="1716" height="1048" rx="90" fill="#242032" stroke="#3b587e"/>
+<text x="870" y="72" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="30" font-weight="700">VISTA FÍSICA · PRÁCTICA 8</text>
+<rect x="85" y="170" width="250" height="93" rx="16" fill="#121212" stroke="#ffffff"/>
+<text x="210.0" y="205.3" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">Vercel</text>
+<text x="210.0" y="227.7" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">Frontend Next.js</text>
+<rect x="85" y="355" width="250" height="93" rx="16" fill="#121212" stroke="#ffffff"/>
+<text x="210.0" y="390.3" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">GitHub Actions</text>
+<text x="210.0" y="412.7" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">CI/CD</text>
+<rect x="85" y="545" width="250" height="93" rx="16" fill="#121212" stroke="#ffffff"/>
+<text x="210.0" y="580.3" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">GHCR</text>
+<text x="210.0" y="602.7" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">4 imágenes versionadas</text>
+<rect x="405" y="148" width="1240" height="848" rx="25" fill="#17151f" stroke="#ffffff"/>
+<text x="1025.0" y="572.0" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600"></text>
+<rect x="455" y="246" width="250" height="84" rx="10" fill="#121212" stroke="#ffffff"/>
+<text x="580.0" y="276.8" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">Caddy HTTPS</text>
+<text x="580.0" y="299.2" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="18" font-weight="600">:443 · sslip.io</text>
+<rect x="810" y="246" width="320" height="84" rx="10" fill="#121212" stroke="#ffffff"/>
+<text x="970.0" y="277.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">Servicios HTTP</text>
+<text x="970.0" y="298.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">Go Reservas · TS Catálogo · TS Certificados</text>
+<rect x="1225" y="447" width="310" height="84" rx="10" fill="#121212" stroke="#ffffff"/>
+<text x="1380.0" y="478.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">Worker Python</text>
+<text x="1380.0" y="499.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">consumidor sin puerto público</text>
+<rect x="455" y="447" width="255" height="84" rx="10" fill="#121212" stroke="#ffffff"/>
+<text x="582.5" y="478.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">RabbitMQ</text>
+<text x="582.5" y="499.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">AMQP · cola durable + DLQ</text>
+<rect x="810" y="447" width="255" height="84" rx="10" fill="#121212" stroke="#ffffff"/>
+<text x="937.5" y="478.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">Redis</text>
+<text x="937.5" y="499.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">seguimiento y caché</text>
+<path d="M1225,716 C1225,700 1535,700 1535,716 V776 C1535,793 1225,793 1225,776Z" fill="#121212" stroke="#ffffff"/>
+<ellipse cx="1380.0" cy="716" rx="155.0" ry="12" fill="#121212" stroke="#ffffff"/>
+<text x="1380.0" y="735.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">PostgreSQL Catálogo</text>
+<text x="1380.0" y="756.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">cupos y talleres</text>
+<path d="M455,716 C455,700 765,700 765,716 V776 C765,793 455,793 455,776Z" fill="#121212" stroke="#ffffff"/>
+<ellipse cx="610.0" cy="716" rx="155.0" ry="12" fill="#121212" stroke="#ffffff"/>
+<text x="610.0" y="735.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">PostgreSQL Reservas</text>
+<text x="610.0" y="756.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">reservas y pases</text>
+<path d="M810,716 C810,700 1120,700 1120,716 V776 C1120,793 810,793 810,776Z" fill="#121212" stroke="#ffffff"/>
+<ellipse cx="965.0" cy="716" rx="155.0" ry="12" fill="#121212" stroke="#ffffff"/>
+<text x="965.0" y="735.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">PostgreSQL Credenciales</text>
+<text x="965.0" y="756.5" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="17" font-weight="600">verificación de pases</text>
+<path d="M335 215 L455 215 L455 288" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="455" y="204" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">HTTPS 443</text>
+<text x="455" y="204" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">HTTPS 443</text>
+<path d="M705 288 L810 288" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="757.5" y="272" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">HTTP interno</text>
+<text x="757" y="272" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">HTTP interno</text>
+<path d="M850 330 L850 395 L580 395 L580 447" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="580" y="382" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">publicación AMQP</text>
+<text x="580" y="382" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">publicación AMQP</text>
+<path d="M710 489 L750 489 L750 575 L1380 575 L1380 531" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="750" y="563" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">entrega de cola</text>
+<text x="750" y="563" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">entrega de cola</text>
+<path d="M1380 447 L1380 366 L1060 366 L1060 330" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1060" y="351" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">gRPC cupo / pase</text>
+<text x="1060" y="351" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">gRPC cupo / pase</text>
+<path d="M970 330 L970 447" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="970.0" y="389" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">caché</text>
+<text x="970" y="389" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">caché</text>
+<path d="M1225 489 L1065 489" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1145.0" y="476" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">resultado</text>
+<text x="1145" y="476" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">resultado</text>
+<path d="M1270 531 L1270 646 L610 646 L610 704" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="610" y="633" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">persistencia reservas</text>
+<text x="610" y="633" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">persistencia reservas</text>
+<path d="M1095 330 L1160 330 L1160 678 L965 678 L965 704" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1160" y="668" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">persistencia credenciales</text>
+<text x="1160" y="668" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">persistencia credenciales</text>
+<path d="M1120 288 L1580 288 L1580 686 L1380 686 L1380 704" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1580" y="676" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">persistencia catálogo</text>
+<text x="1580" y="676" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">persistencia catálogo</text>
+<path d="M210 448 L210 545" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="210.0" y="506" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">build / push</text>
+<text x="210" y="506" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">build / push</text>
+<path d="M335 589 L385 589 L385 815 L405 815" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="385" y="801" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">pull de imágenes</text>
+<text x="385" y="801" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">pull de imágenes</text>
+<path d="M335 400 L365 400 L365 882 L405 882" fill="none" stroke="#ffffff" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="365" y="869" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="600">SSH + compose up -d</text>
+<text x="365" y="869" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="700">SSH + compose up -d</text>
+</svg>

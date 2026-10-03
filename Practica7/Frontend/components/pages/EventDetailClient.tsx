@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { AppShell, MockContractNote, PageIntro } from '@/components/AppShell';
+import { AppShell, ContractNote, PageIntro } from '@/components/AppShell';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { StatusBadge } from '@/components/StatusBadge';
-import { getEvent } from '@/lib/mock-api';
-import type { EventDetail } from '@/lib/types';
+import { consultarDisponibilidad, obtenerEvento, type EventoCompleto } from '@/lib/api/academix-api';
+import { apiConfig, hostLegible } from '@/lib/config';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -17,7 +17,7 @@ function errorMessage(error: unknown): string {
 export function EventDetailClient() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get('eventId') ?? '';
-  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [event, setEvent] = useState<EventoCompleto | null>(null);
   const [loading, setLoading] = useState(Boolean(eventId));
   const [error, setError] = useState<string | null>(eventId ? null : 'No se indicó un evento válido.');
 
@@ -30,9 +30,21 @@ export function EventDetailClient() {
     let active = true;
     setLoading(true);
     setError(null);
-    void getEvent(eventId)
-      .then((result) => {
-        if (active) setEvent(result);
+
+    /**
+     * El detalle y la disponibilidad se piden en paralelo, pero la
+     * disponibilidad manda sobre el contador del detalle: si otro estudiante
+     * reservo un cupo mientras se abria la pagina, el numero del detalle puede
+     * venir cacheado y el de disponibilidad es el que acaba de leerse.
+     */
+    void Promise.all([obtenerEvento(eventId), consultarDisponibilidad(eventId)])
+      .then(([detalle, disponibilidad]) => {
+        if (!active) return;
+        setEvent({
+          ...detalle,
+          availableSeats: disponibilidad.disponibles,
+          totalSeats: disponibilidad.total || detalle.totalSeats,
+        });
       })
       .catch((reason: unknown) => {
         if (active) {
@@ -43,6 +55,7 @@ export function EventDetailClient() {
       .finally(() => {
         if (active) setLoading(false);
       });
+
     return () => {
       active = false;
     };
@@ -76,8 +89,10 @@ export function EventDetailClient() {
               <dl className="detail-list">
                 <div><dt>Curso</dt><dd>{event.course}</dd></div>
                 <div><dt>Ponente</dt><dd>{event.speaker}</dd></div>
+                <div><dt>Correo del ponente</dt><dd>{event.speakerEmail}</dd></div>
                 <div><dt>Fecha y hora</dt><dd>{event.date}</dd></div>
                 <div><dt>Modalidad</dt><dd>{event.modality}</dd></div>
+                <div><dt>Estado</dt><dd>{event.state}</dd></div>
                 <div><dt>Cupo total</dt><dd>{event.totalSeats}</dd></div>
               </dl>
             </article>
@@ -108,7 +123,9 @@ export function EventDetailClient() {
           </div>
         )}
 
-        <MockContractNote>La vista utiliza GET /mock/events/{'{eventId}'} y no crea una reserva durante la consulta.</MockContractNote>
+        <ContractNote>
+          GET {hostLegible(apiConfig.catalogo)}/api/talleres/eventos/{eventId || '{eventoId}'} · Servicio de Catálogo de Talleres.
+        </ContractNote>
       </section>
     </AppShell>
   );

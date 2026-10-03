@@ -1,0 +1,37 @@
+# Contexto de build de las cuatro imagenes de la Practica 8.
+# Todo lo listado aqui queda fuera de la imagen: acelera la construccion y
+# evita que artefactos de la maquina del estudiante terminen en produccion.
+
+# Dependencias de Node (se reinstalan dentro de la imagen)
+**/node_modules
+**/dist
+**/coverage
+
+# Artefactos de Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+.venv
+venv
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Git y secretos
+.git
+.gitignore
+**/.env
+**/.env.local
+**/*.pem
+**/*.key
+
+# Documentacion: no viaja a la imagen
+Documentacion
+README.md

@@ -1,0 +1,334 @@
+# =====================================================================
+# Malla SOA de Academix Pass & CertiHub  --  Practica 8
+# =====================================================================
+# Este archivo es el entregable de la Maquina Virtual de Desarrollo.
+#
+# REGLA DE ORO DEL ENUNCIADO: aqui NO existe la directiva `build:`.
+# La VM no compila nada; unicamente descarga imagenes ya publicadas en el
+# Container Registry. El ciclo completo es:
+#
+#     push a develop  ->  GitHub Actions compila con Buildx y publica imagenes
+#                     ->  SSH a la VM  ->  docker compose pull
+#                                       ->  docker compose up -d
+#
+# Compilar en local, si se quiere, se hace con el override de desarrollo:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# =====================================================================
+
+name: academix-pass
+
+# En despliegues, CI pasa IMAGE_TAG para fijar la versión construida por ese
+# commit (2.0.0-<sha>). El valor por defecto permite levantar el release formal
+# 2.0.0 manualmente. El compose de desarrollo usa sus propias imágenes locales.
+x-entorno: &entorno
+  TZ: America/Guatemala
+  NODE_ENV: production
+
+x-salud: &salud
+  restart: unless-stopped
+  networks: [academix]
+
+networks:
+  academix:
+    driver: bridge
+
+# =====================================================================
+# 1. INFRAESTRUCTURA DE MENSAJERIA
+# =====================================================================
+# RabbitMQ es el Message Broker exigido por el enunciado. La version 3.13
+# soporta colas de tipo quorum, que es lo que permite la garantia de no
+# perder tickets: cada mensaje se replica en un quorum de nodos y sobrevive
+# a la caida del worker porque el ACK lo emite el worker, no el broker.
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: academix-rabbitmq
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${BROKER_USUARIO:-academix}
+      RABBITMQ_DEFAULT_PASS: ${BROKER_PASSWORD:-academix_secret}
+      # Vhost por defecto "/", que es al que apuntan las URL de los servicios
+      # (la parte "%2F" de amqp://usuario:clave@rabbitmq:5672/%2F).
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      # 5672  AMQP  -- solo lo consume la red interna, no hace falta publicarlo
+      # 15672 consola de gestion, para demostrar la cola llenandose
+      - "${PUERTO_BROKER_CONSOLA:-15672}:15672"
+    volumes:
+      - rabbitmq-datos:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks: [academix]
+
+  redis:
+    image: redis:7-alpine
+    container_name: academix-redis
+    hostname: redis
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - "${PUERTO_REDIS:-6379}:6379"
+    volumes:
+      - redis-datos:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [academix]
+
+  # =================================================================
+  # 2. PERSISTENCIA  --  una base por servicio dueno
+  # =================================================================
+  # Cada base tiene un unico escritor. El productor (reservas-service) no
+  # tiene credenciales sobre ninguna: es stateless y su unica salida es el
+  # broker. Esa separacion es la que evita la contencion de bloqueos que
+  # motiva la practica.
+  postgres-catalogo:
+    image: postgres:16-alpine
+    container_name: academix-postgres-catalogo
+    hostname: postgres-catalogo
+    environment:
+      POSTGRES_DB: ${DB_CATALOGO_NOMBRE:-academix_catalogo}
+      POSTGRES_USER: ${DB_USUARIO:-academix}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-academix_secret}
+    ports:
+      - "${PUERTO_DB_CATALOGO:-5432}:5432"
+    volumes:
+      - ./Backend/sql/01-catalogo.sql:/docker-entrypoint-initdb.d/01-catalogo.sql:ro
+      - postgres-catalogo-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USUARIO:-academix} -d ${DB_CATALOGO_NOMBRE:-academix_catalogo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [academix]
+
+  postgres-reservas:
+    image: postgres:16-alpine
+    container_name: academix-postgres-reservas
+    hostname: postgres-reservas
+    environment:
+      POSTGRES_DB: ${DB_RESERVAS_NOMBRE:-academix_reservas}
+      POSTGRES_USER: ${DB_USUARIO:-academix}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-academix_secret}
+    ports:
+      - "${PUERTO_DB_RESERVAS:-5433}:5432"
+    volumes:
+      - ./Backend/sql/02-reservas.sql:/docker-entrypoint-initdb.d/02-reservas.sql:ro
+      - postgres-reservas-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USUARIO:-academix} -d ${DB_RESERVAS_NOMBRE:-academix_reservas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [academix]
+
+  postgres-credenciales:
+    image: postgres:16-alpine
+    container_name: academix-postgres-credenciales
+    hostname: postgres-credenciales
+    environment:
+      POSTGRES_DB: ${DB_CREDENCIALES_NOMBRE:-academix_credenciales}
+      POSTGRES_USER: ${DB_USUARIO:-academix}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-academix_secret}
+    ports:
+      - "${PUERTO_DB_CREDENCIALES:-5434}:5432"
+    volumes:
+      - ./Backend/sql/03-credenciales.sql:/docker-entrypoint-initdb.d/03-credenciales.sql:ro
+      - postgres-credenciales-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USUARIO:-academix} -d ${DB_CREDENCIALES_NOMBRE:-academix_credenciales}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [academix]
+
+  # =================================================================
+  # 3. SERVICIO DE CATALOGO DE TALLERES  (TypeScript)
+  # =================================================================
+  # Dueno de postgres-catalogo. Publica el listado de eventos, ponentes y
+  # cupos en tiempo real, y es el unico que puede descontar un cupo, via
+  # gRPC (nunca por HTTP desde el navegador).
+  catalogo-service:
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/catalogo-service:${IMAGE_TAG:-2.0.0}
+    container_name: academix-catalogo-service
+    hostname: catalogo-service
+    environment:
+      <<: *entorno
+      CATALOGO_VERSION: "2.0.0"
+      CATALOGO_HTTP_PUERTO: "8080"
+      CATALOGO_GRPC_PUERTO: "50061"
+      CATALOGO_PG_DSN: postgresql://${DB_USUARIO:-academix}:${DB_PASSWORD:-academix_secret}@postgres-catalogo:5432/${DB_CATALOGO_NOMBRE:-academix_catalogo}
+      CATALOGO_PG_MAX_CONEXIONES: "10"
+      CATALOGO_REDIS_URL: redis://redis:6379/1
+      CATALOGO_TTL_LISTADO_SEG: "15"
+      CATALOGO_TTL_DETALLE_SEG: "30"
+      CATALOGO_ORIGENES_PERMITIDOS: ${CORS_ORIGENES:-*}
+      CATALOGO_PROTO_DIR: /app/proto
+    ports:
+      - "${PUERTO_CATALOGO_HTTP:-8081}:8080"
+    depends_on:
+      postgres-catalogo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    <<: *salud
+    networks: [academix]
+
+  # =================================================================
+  # 4. SERVICIO DE CERTIFICADOS  (TypeScript)
+  # =================================================================
+  # Dueno de postgres-credenciales. El worker le registra el pase emitido
+  # por gRPC; el verificador publico lo consulta por HTTP.
+  certificados-service:
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/certificados-service:${IMAGE_TAG:-2.0.0}
+    container_name: academix-certificados-service
+    hostname: certificados-service
+    environment:
+      <<: *entorno
+      CERTIFICADOS_VERSION: "2.0.0"
+      CERTIFICADOS_HTTP_PUERTO: "8080"
+      CERTIFICADOS_GRPC_PUERTO: "50063"
+      CERTIFICADOS_PG_DSN: postgresql://${DB_USUARIO:-academix}:${DB_PASSWORD:-academix_secret}@postgres-credenciales:5432/${DB_CREDENCIALES_NOMBRE:-academix_credenciales}
+      CERTIFICADOS_PG_MAX_CONEXIONES: "5"
+      CERTIFICADOS_CLAVE_FIRMA: ${CLAVE_FIRMA_PASE:-clave-de-firma-de-la-practica-8}
+      CERTIFICADOS_ORIGENES_PERMITIDOS: ${CORS_ORIGENES:-*}
+      CERTIFICADOS_PROTO_DIR: /app/proto
+    ports:
+      - "${PUERTO_CERTIFICADOS_HTTP:-8082}:8080"
+    depends_on:
+      postgres-credenciales:
+        condition: service_healthy
+    <<: *salud
+    networks: [academix]
+
+  # =================================================================
+  # 5. SERVICIO DE RESERVAS / TICKETING  (Go)  --  PRODUCTOR
+  # =================================================================
+  # No abre ninguna conexion a la base de datos. Recibe la peticion desde
+  # Vercel, la valida sintacticamente, genera el tracking id, publica el
+  # evento en RabbitMQ esperando la confirmacion del broker y responde
+  # 202 Accepted. Redis solo guarda el estado de seguimiento para que el
+  # cliente pueda consultar el avance sin tocar la base.
+  reservas-service:
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservas-service:${IMAGE_TAG:-2.0.0}
+    container_name: academix-reservas-service
+    hostname: reservas-service
+    environment:
+      <<: *entorno
+      VERSION_SERVICIO: "2.0.0"
+      PUERTO_HTTP: "8080"
+      PUERTO_GRPC: "50060"
+      BROKER_URL: amqp://${BROKER_USUARIO:-academix}:${BROKER_PASSWORD:-academix_secret}@rabbitmq:5672/%2F
+      BROKER_EXCHANGE: academix.reservas
+      BROKER_COLA: academix.reservas.solicitudes
+      BROKER_ROUTING_KEY: reserva.solicitada
+      BROKER_EXCHANGE_MUERTOS: academix.reservas.dlx
+      BROKER_COLA_MUERTOS: academix.reservas.dlq
+      BROKER_ROUTING_KEY_MUERTOS: reserva.descartada
+      BROKER_REINTENTOS: "3"
+      BROKER_ESPERA_MS: "250"
+      REDIS_ADDR: redis:6379
+      REDIS_TTL_SEGUNDOS: "86400"
+      CORS_ORIGENES: ${CORS_ORIGENES:-*}
+    ports:
+      - "${PUERTO_RESERVAS_HTTP:-8080}:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    <<: *salud
+    networks: [academix]
+
+  # =================================================================
+  # 6. WORKER / CONSUMIDOR ASINCRONO  (Python)
+  # =================================================================
+  # No expone puertos: es un proceso de segundo plano. Escucha la cola con
+  # ACK manual, reclama el cupo por gRPC de forma atomica, firma el pase y
+  # persiste. Si este contenedor se apaga, la cola sigue acumulando
+  # mensajes; al encenderlo los drena todos.
+  reservation-worker:
+    image: ${REGISTRY_IMAGENES:-ghcr.io/thanya-gate}/academix/reservation-worker:${IMAGE_TAG:-2.0.0}
+    container_name: academix-reservation-worker
+    hostname: reservation-worker
+    environment:
+      <<: *entorno
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      BROKER_URL: amqp://${BROKER_USUARIO:-academix}:${BROKER_PASSWORD:-academix_secret}@rabbitmq:5672/%2F
+      BROKER_EXCHANGE: academix.reservas
+      BROKER_COLA: academix.reservas.solicitudes
+      BROKER_ROUTING_KEY: reserva.solicitada
+      BROKER_EXCHANGE_MUERTOS: academix.reservas.dlx
+      BROKER_COLA_MUERTOS: academix.reservas.dlq
+      BROKER_ROUTING_KEY_MUERTOS: reserva.descartada
+      BROKER_EXCHANGE_RESULTADOS: academix.reservas.resultados
+      BROKER_ROUTING_KEY_RESULTADOS: reserva.resultada
+      BROKER_PREFETCH: "20"
+      DATABASE_URL: postgresql://${DB_USUARIO:-academix}:${DB_PASSWORD:-academix_secret}@postgres-reservas:5432/${DB_RESERVAS_NOMBRE:-academix_reservas}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_TTL_SEGUNDOS: "86400"
+      CATALOGO_GRPC_ADDR: catalogo-service:50061
+      CERTIFICADOS_GRPC_ADDR: certificados-service:50063
+      CLAVE_FIRMA_PASE: ${CLAVE_FIRMA_PASE:-clave-de-firma-de-la-practica-8}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres-reservas:
+        condition: service_healthy
+      catalogo-service:
+        condition: service_started
+      certificados-service:
+        condition: service_started
+    restart: unless-stopped
+    networks: [academix]
+
+  # Proxy HTTPS de las APIs. Usa la red host para llegar a los puertos de
+  # localhost de este Compose sin ocupar el Caddy HTTP ya existente de YouSAC.
+  academix-gateway:
+    image: caddy:2-alpine
+    container_name: academix-gateway
+    network_mode: host
+    environment:
+      TZ: America/Guatemala
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-datos:/data
+      - caddy-config:/config
+    depends_on:
+      catalogo-service:
+        condition: service_started
+      certificados-service:
+        condition: service_started
+      reservas-service:
+        condition: service_started
+    restart: unless-stopped
+
+# =====================================================================
+# Volumenes: sin ellos, los mensajes y las reservas viven en el capa de
+# escritura del contenedor y se pierden al recrearlo. La durabilidad de la
+# cola es parte de la nota de la practica.
+# =====================================================================
+volumes:
+  rabbitmq-datos:
+  redis-datos:
+  postgres-catalogo-datos:
+  postgres-reservas-datos:
+  postgres-credenciales-datos:
+  caddy-datos:
+  caddy-config:

@@ -1,0 +1,29 @@
+# El gateway de Academix escucha en 443. El Caddy HTTP de YouSAC conserva el
+# puerto 80; TLS-ALPN valida el certificado sin ocupar ese puerto.
+{
+	auto_https disable_redirects
+	admin 127.0.0.1:2021
+}
+
+136.119.139.125.sslip.io {
+	encode zstd gzip
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+
+	handle_path /catalogo/* {
+		reverse_proxy 127.0.0.1:18081
+	}
+
+	handle_path /reservas/* {
+		reverse_proxy 127.0.0.1:18080
+	}
+
+	handle_path /certificados/* {
+		reverse_proxy 127.0.0.1:18082
+	}
+
+	respond "Not found" 404
+}

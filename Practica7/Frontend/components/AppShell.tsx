@@ -28,6 +28,11 @@ export function PageIntro({
   );
 }
 
-export function MockContractNote({ children }: { children: ReactNode }) {
+/**
+ * Pie de contrato: declara el endpoint real que alimenta la vista. En la
+ * Practica 8 cumple una segunda funcion, que es dejar visible en la interfaz
+ * que los datos vienen de la VM y no de un simulador local.
+ */
+export function ContractNote({ children }: { children: ReactNode }) {
   return <p className="contract-note">{children}</p>;
 }

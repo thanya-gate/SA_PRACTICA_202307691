@@ -1,0 +1,71 @@
+# =====================================================================
+# Override de DESARROLLO LOCAL  --  Practica 8
+# =====================================================================
+# Este archivo NUNCA va a la maquina virtual de desarrollo. Solo se usa en
+# la maquina del estudiante para poder construir imagenes antes de que
+# exista el pipeline de CI/CD.
+#
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# Diferencias respecto al entregable:
+#   1.Agrega `build:` (todo el punto del override).
+#   2. Cambia el namespace de las imagenes a `academix/` para que nunca
+#      se confunda una imagen local con la publicada en el Registry.
+#   3. Mueve los puertos del host para no chocar con otros proyectos de
+#      Docker que ya esten corriendo en la misma maquina.
+# =====================================================================
+
+services:
+  # ---------------------------------------------------------------
+  # Puertos alternos: el stack de practicas anteriores ya ocupa
+  # 5432-5437, 8080, 8081 y 6379 en esta maquina.
+  # ---------------------------------------------------------------
+  redis:
+    ports:
+      - "${PUERTO_REDIS:-6380}:6379"
+
+  postgres-catalogo:
+    ports:
+      - "${PUERTO_DB_CATALOGO:-5440}:5432"
+
+  postgres-reservas:
+    ports:
+      - "${PUERTO_DB_RESERVAS:-5441}:5432"
+
+  postgres-credenciales:
+    ports:
+      - "${PUERTO_DB_CREDENCIALES:-5442}:5432"
+
+  rabbitmq:
+    ports:
+      - "${PUERTO_BROKER_CONSOLA:-15673}:15672"
+
+  reservas-service:
+    image: academix/reservas-service:2.0.0
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile.reservas
+    ports:
+      - "${PUERTO_RESERVAS_HTTP:-8090}:8080"
+
+  catalogo-service:
+    image: academix/catalogo-service:2.0.0
+    build:
+      context: ./Backend
+      dockerfile: services/catalogo-service/Dockerfile
+    ports:
+      - "${PUERTO_CATALOGO_HTTP:-8091}:8080"
+
+  certificados-service:
+    image: academix/certificados-service:2.0.0
+    build:
+      context: ./Backend
+      dockerfile: services/certificados-service/Dockerfile
+    ports:
+      - "${PUERTO_CERTIFICADOS_HTTP:-8092}:8080"
+
+  reservation-worker:
+    image: academix/reservation-worker:2.0.0
+    build:
+      context: ./Backend
+      dockerfile: services/reservation-worker/Dockerfile

@@ -1,63 +1,69 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AppShell, MockContractNote, PageIntro } from '@/components/AppShell';
+import { AppShell, ContractNote, PageIntro } from '@/components/AppShell';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { FormField } from '@/components/FormField';
 import { StatusBadge } from '@/components/StatusBadge';
-import { getReservation } from '@/lib/mock-api';
-import type { ReservationRecord } from '@/lib/types';
+import { apiConfig, hostLegible } from '@/lib/config';
+import { useSeguimientoReserva, type FaseSeguimiento } from '@/lib/use-seguimiento-reserva';
+import type { ReservationStatus } from '@/lib/types';
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return 'Intenta nuevamente en unos momentos.';
-}
+const TITULOS: Record<ReservationStatus, string> = {
+  PENDIENTE: 'Solicitud recibida',
+  CONFIRMADA: 'Reserva confirmada',
+  RECHAZADA: 'Reserva rechazada',
+  SIN_CUPO: 'Sin cupo disponible',
+};
 
-function resultTitle(status: ReservationRecord['status']): string {
-  switch (status) {
-    case 'PENDIENTE': return 'Solicitud recibida';
-    case 'CONFIRMADA': return 'Reserva confirmada';
-    case 'RECHAZADA': return 'Reserva rechazada';
-    case 'SIN_CUPO': return 'Sin cupo disponible';
-  }
-}
+const EXPLICACION: Record<FaseSeguimiento, string> = {
+  idle: '',
+  consultando: 'Consultando el estado en el productor…',
+  esperando: 'En cola: el worker todavía no ha publicado el resultado.',
+  resuelto: '',
+  agotado: '',
+};
 
 export function ReservationStatusClient() {
   const searchParams = useSearchParams();
-  const queryReservationId = searchParams.get('reservationId') ?? '';
-  const [reservationId, setReservationId] = useState(queryReservationId);
-  const [reservation, setReservation] = useState<ReservationRecord | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryTrackingId = searchParams.get('trackingId') ?? '';
+  const [campo, setCampo] = useState(queryTrackingId);
+  const [trackingId, setTrackingId] = useState(queryTrackingId);
+  /**
+   * Al llegar por `/reservas?trackingId=...` el campo ya viene relleno, asi
+   * que volver a buscar el MISMO identificador no cambia el estado. El
+   * disparador obliga al hook a reiniciar el polling en ese caso.
+   */
+  const [disparador, setDisparador] = useState(0);
+  const primeraCarga = useRef(true);
 
-  const loadReservation = useCallback(async (id: string) => {
-    const normalized = id.trim();
-    if (!normalized) {
-      setError('Ingresa un identificador de reserva.');
-      setReservation(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      setReservation(await getReservation(normalized));
-    } catch (reason: unknown) {
-      setReservation(null);
-      setError(errorMessage(reason));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { fase, seguimiento, error, intentos, consultar } = useSeguimientoReserva(
+    trackingId,
+    true,
+    disparador,
+  );
 
   useEffect(() => {
-    if (queryReservationId) void loadReservation(queryReservationId);
-  }, [loadReservation, queryReservationId]);
+    setCampo(queryTrackingId);
+    setTrackingId(queryTrackingId);
+    // El estado inicial ya nace con el valor de la query, asi que en el primer
+    // render no hay nada que reiniciar: incrementar aqui duplicaria la consulta.
+    if (primeraCarga.current) {
+      primeraCarga.current = false;
+      return;
+    }
+    setDisparador((valor) => valor + 1);
+  }, [queryTrackingId]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void loadReservation(reservationId);
+    setTrackingId(campo.trim());
+    setDisparador((valor) => valor + 1);
   }
+
+  const cargando = fase === 'consultando';
+  const enCola = fase === 'esperando' && seguimiento !== null;
 
   return (
     <AppShell>
@@ -65,50 +71,71 @@ export function ReservationStatusClient() {
         <PageIntro
           caseId="CU-P7-04"
           title="Consultar reserva"
-          description="Ingresa el identificador para conocer el resultado del procesamiento."
+          description="Ingresa el identificador de seguimiento para conocer el resultado del procesamiento asíncrono."
         />
         <form className="inline-query" onSubmit={submit}>
           <FormField
             id="reservation-id"
-            label="Identificador de reserva"
-            placeholder="RSV-2026-000184"
-            value={reservationId}
-            onChange={(input) => setReservationId(input.target.value)}
+            label="Identificador de seguimiento"
+            placeholder="trackingId devuelto al enviar la solicitud"
+            value={campo}
+            onChange={(input) => setCampo(input.target.value)}
           />
-          <button className="button button--primary" type="submit" disabled={loading}>
-            {loading ? 'Consultando…' : 'Consultar'}
+          <button className="button button--primary" type="submit" disabled={cargando}>
+            {cargando ? 'Consultando…' : 'Consultar'}
           </button>
         </form>
 
-        {loading && <LoadingState label="Consultando el estado de la reserva…" />}
-        {!loading && error && <ErrorState message={error} />}
-        {!loading && !error && reservation && (
+        {cargando && <LoadingState label="Consultando el estado de la reserva…" />}
+        {!cargando && fase === 'idle' && error && <ErrorState message={error} />}
+        {!cargando && enCola && (
+          <section className="panel result-card" aria-live="polite">
+            <StatusBadge status="PENDIENTE" />
+            <h2>Solicitud recibida</h2>
+            <p>{seguimiento?.message}</p>
+            <p className="panel-note">
+              {EXPLICACION.esperando} Consultas realizadas: {intentos}.
+            </p>
+          </section>
+        )}
+        {!cargando && (fase === 'resuelto' || fase === 'agotado') && seguimiento && (
           <section className="panel result-card" aria-live="polite" aria-labelledby="reservation-result-title">
-            <StatusBadge status={reservation.status} />
-            <h2 id="reservation-result-title">{resultTitle(reservation.status)}</h2>
-            <p>{reservation.message}</p>
+            <StatusBadge status={seguimiento.status} />
+            <h2 id="reservation-result-title">{TITULOS[seguimiento.status]}</h2>
+            <p>{seguimiento.message}</p>
             <hr />
             <dl className="result-details">
-              <div><dt>Evento</dt><dd>{reservation.eventTitle}</dd></div>
-              <div><dt>Reserva</dt><dd>{reservation.reservationId}</dd></div>
+              <div><dt>Seguimiento</dt><dd>{seguimiento.trackingId}</dd></div>
+              {seguimiento.reservationId && <div><dt>Reserva</dt><dd>{seguimiento.reservationId}</dd></div>}
+              {seguimiento.processedAt && <div><dt>Procesada</dt><dd>{seguimiento.processedAt}</dd></div>}
             </dl>
-            {reservation.ticket && (
+            {seguimiento.ticket && (
               <div className="ticket-card">
-                <h3>Ticket generado</h3>
-                <p><strong>Identificador:</strong> {reservation.ticket.ticketId}</p>
-                <p><strong>Emisión:</strong> {reservation.ticket.issuedAt}</p>
-                <p><strong>Actividad:</strong> {reservation.ticket.eventTitle}</p>
+                <h3>Pase emitido por el worker</h3>
+                <p><strong>Código de validación:</strong> {seguimiento.ticket.validationCode}</p>
+                <p><strong>Firma:</strong> {seguimiento.ticket.signature}</p>
+                <p><strong>Titular:</strong> {seguimiento.ticket.holder}</p>
+                <p><strong>Actividad:</strong> {seguimiento.ticket.eventTitle}</p>
+                <p><strong>Emisión:</strong> {seguimiento.ticket.issuedAt}</p>
               </div>
-            )}
-            {reservation.status === 'PENDIENTE' && (
-              <button className="button button--secondary button--full" type="button" onClick={() => void loadReservation(reservation.reservationId)}>
-                Actualizar estado
-              </button>
             )}
           </section>
         )}
+        {!cargando && fase === 'agotado' && (
+          <div className="stack stack--small">
+            {error && <ErrorState message={error} onRetry={consultar} />}
+            {!seguimiento && (
+              <button className="button button--secondary button--fit" type="button" onClick={consultar}>
+                Volver a consultar
+              </button>
+            )}
+          </div>
+        )}
 
-        <MockContractNote>La consulta utiliza GET /mock/reservations/{'{reservationId}'}; no publica mensajes nuevos.</MockContractNote>
+        <ContractNote>
+          GET {hostLegible(apiConfig.reservas)}/api/reservas/&lt;trackingId&gt;/estado · lee la caché de seguimiento
+          (Redis) mientras el worker procesa la cola; nunca consulta la base de datos desde el navegador.
+        </ContractNote>
       </section>
     </AppShell>
   );

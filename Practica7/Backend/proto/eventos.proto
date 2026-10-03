@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package academix.eventos.v1;
+
+option go_package = "github.com/yousac/academix-pass/backend/gen/eventosv1;eventosv1";
+
+// Contrato de datos del bus de eventos (RabbitMQ).
+// Estos mensajes son los unicos que cruzan el broker: el productor
+// (reservas-service) serializa SolicitudReserva y el worker
+// (reservation-worker) serializa ResultadoReserva. El resto de
+// servicios nunca toca el broker.
+
+enum EstadoReserva {
+  ESTADO_RESERVA_NO_ESPECIFICADO = 0;
+  PENDIENTE = 1;
+  CONFIRMADA = 2;
+  RECHAZADA = 3;
+  SIN_CUPO = 4;
+}
+
+// Emitida por el productor al publicar la solicitud de reserva.
+message SolicitudReserva {
+  string tracking_id = 1;
+  string evento_id = 2;
+  string estudiante_nombre = 3;
+  string estudiante_correo = 4;
+  string canal = 5;
+  string publicado_en = 6;
+  int32 intento = 7;
+}
+
+// Emitida por el worker tras resolver la disponibilidad de cupo.
+message ResultadoReserva {
+  string tracking_id = 1;
+  string reserva_id = 2;
+  string evento_id = 3;
+  EstadoReserva estado = 4;
+  string mensaje = 5;
+  TicketPase ticket = 6;
+  string procesado_en = 7;
+  string motivo_rechazo = 8;
+}
+
+// Pase emitido con firma y codigo de verificacion.
+message TicketPase {
+  string codigo_validacion = 1;
+  string firma = 2;
+  string emitido_en = 3;
+  string evento_id = 4;
+  string titular = 5;
+  string evento_titulo = 6;
+}
+
+// Envoltura usada por el worker para reportar al exchange de resultados.
+message ResultadoReservaEnvelope {
+  ResultadoReserva resultado = 1;
+  string cola_origen = 2;
+}

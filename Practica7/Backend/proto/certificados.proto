@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package academix.credenciales.v1;
+
+option go_package = "github.com/yousac/academix-pass/backend/gen/credencialesv1;credencialesv1";
+
+// Servicio de Certificados.
+// Verifica el codigo de validacion impreso en el pase emitido por el worker.
+
+service CertificadosService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc VerificarCredencial(VerificarCredencialRequest) returns (VerificarCredencialResponse);
+  rpc RegistrarEmision(RegistrarEmisionRequest) returns (RegistrarEmisionResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string estado = 1;
+  string version = 2;
+  string dependencia_postgres = 3;
+}
+
+message VerificarCredencialRequest {
+  string codigo = 1;
+  // Si se envia, ademas de la firma se recalcula y compara el HMAC.
+  bool exigir_firma = 2;
+}
+
+enum EstadoCredencial {
+  ESTADO_CREDENCIAL_NO_ESPECIFICADO = 0;
+  VALIDA = 1;
+  INVALIDA = 2;
+  NO_ENCONTRADA = 3;
+}
+
+message VerificarCredencialResponse {
+  string codigo = 1;
+  EstadoCredencial estado = 2;
+  string titulo = 3;
+  string titular = 4;
+  string emitido_en = 5;
+  string mensaje = 6;
+}
+
+// Invocado por reservation-worker en el momento en que emite el pase,
+// de modo que credenciales-db sea la unica fuente de verdad al verificar.
+message RegistrarEmisionRequest {
+  string codigo = 1;
+  string titulo = 2;
+  string titular = 3;
+  string evento_id = 4;
+  string firma = 5;
+  string emitido_en = 6;
+  string reserva_id = 7;
+}
+
+message RegistrarEmisionResponse {
+  bool registrada = 1;
+  bool ya_existia = 2;
+}

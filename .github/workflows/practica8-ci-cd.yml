@@ -1,0 +1,257 @@
+name: Práctica 8 CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - 'V*'
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: practica8-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  go-tests:
+    name: Go · pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: Practica7/Backend/go.mod
+      - name: Ejecutar pruebas Go
+        working-directory: Practica7/Backend
+        run: go test ./... -race -count=1
+
+  typescript-tests:
+    name: TypeScript · ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - catalogo-service
+          - certificados-service
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Practica7/Backend/services/${{ matrix.service }}/package-lock.json
+      - name: Instalar dependencias
+        working-directory: Practica7/Backend/services/${{ matrix.service }}
+        run: npm ci
+      - name: Ejecutar pruebas
+        working-directory: Practica7/Backend/services/${{ matrix.service }}
+        run: npm test
+      - name: Revisar tipos
+        working-directory: Practica7/Backend/services/${{ matrix.service }}
+        run: npm run typecheck
+      - name: Compilar servicio
+        working-directory: Practica7/Backend/services/${{ matrix.service }}
+        run: npm run build
+
+  worker-tests:
+    name: Python · worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: Practica7/Backend/services/reservation-worker/requirements.txt
+      - name: Instalar dependencias
+        working-directory: Practica7/Backend/services/reservation-worker
+        run: python -m pip install -r requirements.txt
+      - name: Ejecutar pruebas
+        working-directory: Practica7/Backend/services/reservation-worker
+        run: python -m pytest
+
+  frontend-tests:
+    name: Frontend · pruebas y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Practica7/Frontend/package-lock.json
+      - name: Instalar dependencias
+        working-directory: Practica7/Frontend
+        run: npm ci
+      - name: Ejecutar pruebas
+        working-directory: Practica7/Frontend
+        run: npm test
+      - name: Revisar tipos
+        working-directory: Practica7/Frontend
+        run: npm run typecheck
+      - name: Compilar frontend
+        working-directory: Practica7/Frontend
+        run: npm run build
+
+  image-version:
+    name: Resolver tag de imágenes
+    needs:
+      - go-tests
+      - typescript-tests
+      - worker-tests
+      - frontend-tests
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Elegir tag inmutable
+        id: tag
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/V* ]]; then
+            image_tag="${GITHUB_REF_NAME#V}"
+          else
+            image_tag="2.0.0-${GITHUB_SHA}"
+          fi
+          echo "tag=$image_tag" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    name: Publicar imagen · ${{ matrix.image }}
+    needs: image-version
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: reservas-service
+            dockerfile: Dockerfile.reservas
+          - image: catalogo-service
+            dockerfile: services/catalogo-service/Dockerfile
+          - image: certificados-service
+            dockerfile: services/certificados-service/Dockerfile
+          - image: reservation-worker
+            dockerfile: services/reservation-worker/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+      - name: Iniciar Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Autenticar en GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar imagen
+        uses: docker/build-push-action@v7
+        with:
+          context: ./Practica7/Backend
+          file: ./Practica7/Backend/${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ghcr.io/thanya-gate/academix/${{ matrix.image }}:${{ needs.image-version.outputs.tag }}
+            ghcr.io/thanya-gate/academix/${{ matrix.image }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy-vm:
+    name: Desplegar en VM de desarrollo
+    needs:
+      - image-version
+      - build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.VM_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validar configuración de despliegue
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_DEPLOY_PATH: ${{ secrets.VM_DEPLOY_PATH }}
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          VM_SSH_KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
+        run: |
+          for name in VM_HOST VM_USER VM_DEPLOY_PATH VM_SSH_PRIVATE_KEY VM_SSH_KNOWN_HOSTS; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Falta configurar el secret $name. Revisa Practica7/DEPLOYMENT.md."
+              exit 1
+            fi
+          done
+      - name: Preparar acceso SSH
+        env:
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          VM_SSH_KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VM_SSH_PRIVATE_KEY" | tr -d '\r' > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VM_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Copiar Compose y scripts SQL a la VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_DEPLOY_PATH: ${{ secrets.VM_DEPLOY_PATH }}
+          VM_SSH_PORT: ${{ vars.VM_SSH_PORT }}
+        shell: bash
+        run: |
+          port="${VM_SSH_PORT:-22}"
+          remote="$VM_USER@$VM_HOST"
+          ssh -p "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes "$remote" "mkdir -p '$VM_DEPLOY_PATH/Backend'"
+          scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            Practica7/docker-compose.yml "$remote:$VM_DEPLOY_PATH/docker-compose.yml"
+          scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            Practica7/Caddyfile.vm "$remote:$VM_DEPLOY_PATH/Caddyfile"
+          scp -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes -r \
+            Practica7/Backend/sql "$remote:$VM_DEPLOY_PATH/Backend/"
+      - name: Autenticar la VM en GHCR
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_PORT: ${{ vars.VM_SSH_PORT }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          port="${VM_SSH_PORT:-22}"
+          printf '%s' "$GHCR_READ_TOKEN" | ssh -p "$port" -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes "$VM_USER@$VM_HOST" \
+            "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+      - name: Descargar y levantar servicios
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_DEPLOY_PATH: ${{ secrets.VM_DEPLOY_PATH }}
+          VM_SSH_PORT: ${{ vars.VM_SSH_PORT }}
+          IMAGE_TAG: ${{ needs.image-version.outputs.tag }}
+        shell: bash
+        run: |
+          port="${VM_SSH_PORT:-22}"
+          ssh -p "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+          "$VM_USER@$VM_HOST" \
+            "trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT; cd '$VM_DEPLOY_PATH' && test -f .env && test -f Caddyfile && export IMAGE_TAG='$IMAGE_TAG' && docker compose config -q && docker compose pull && docker compose up -d --remove-orphans && docker compose up -d --force-recreate academix-gateway && docker compose ps"
+      - name: Verificar APIs por HTTPS
+        env:
+          API_DOMAIN: 136.119.139.125.sslip.io
+        run: |
+          for path in reservas/api/salud catalogo/api/talleres/salud certificados/api/certificados/salud; do
+            echo "Verificando https://$API_DOMAIN/$path"
+            curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors \
+              --output /dev/null --write-out 'HTTP %{http_code}\n' \
+              "https://$API_DOMAIN/$path"
+          done

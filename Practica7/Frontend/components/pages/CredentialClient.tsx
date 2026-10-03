@@ -2,11 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AppShell, MockContractNote, PageIntro } from '@/components/AppShell';
+import { AppShell, ContractNote, PageIntro } from '@/components/AppShell';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { FormField } from '@/components/FormField';
 import { StatusBadge } from '@/components/StatusBadge';
-import { verifyCredential } from '@/lib/mock-api';
+import { verificarCredencial } from '@/lib/api/academix-api';
+import { apiConfig, hostLegible } from '@/lib/config';
 import type { CredentialVerification } from '@/lib/types';
 
 function errorMessage(error: unknown): string {
@@ -39,7 +40,7 @@ export function CredentialClient() {
     setLoading(true);
     setError(null);
     try {
-      setResult(await verifyCredential(normalized));
+      setResult(await verificarCredencial(normalized));
     } catch (reason: unknown) {
       setResult(null);
       setError(errorMessage(reason));
@@ -103,7 +104,10 @@ export function CredentialClient() {
           </section>
         )}
 
-        <MockContractNote>La consulta utiliza GET /mock/credentials/verify?identifier=.</MockContractNote>
+        <ContractNote>
+          GET {hostLegible(apiConfig.certificados)}/api/certificados/verificar?codigo= · Servicio de Certificados.
+          Responde 200 con estado VÁLIDA, INVÁLIDA o NO_ENCONTRADA.
+        </ContractNote>
       </section>
     </AppShell>
   );
