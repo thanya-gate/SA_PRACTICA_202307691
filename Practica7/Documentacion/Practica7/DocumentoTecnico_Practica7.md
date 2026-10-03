@@ -2,7 +2,7 @@
 
 **Práctica:** 8 (continúacion de la documentación de Práctica 7)
 **Curso:** Software Avanzado
-**Institución:** Universidad de San Carlos de Guatemala
+**Institución:** Universidad de San Carlos de Guatemal
 
 ## Índice
 
