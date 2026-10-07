@@ -4,7 +4,11 @@
 
 locals {
   # trimspace elimina el salto de linea final, que GCP rechaza en los metadatos.
-  ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
+  # Una linea "usuario:clave" por integrante: GCP acepta varias separadas por \n.
+  ssh_keys_metadata = join("\n", [
+    for path in var.ssh_public_key_paths :
+    "${var.ssh_username}:${trimspace(file(pathexpand(path)))}"
+  ])
 
   # Las reglas de firewall apuntan a target_tags, nunca a una IP.
   common_tags      = var.network_tags
@@ -83,7 +87,7 @@ resource "google_compute_instance" "development" {
 
   metadata = {
     # Formato GCP "usuario:clave". Cloud-init la agrega al authorized_keys.
-    ssh-keys = "${var.ssh_username}:${local.ssh_public_key}"
+    ssh-keys = local.ssh_keys_metadata
   }
 
   shielded_instance_config {
@@ -127,7 +131,7 @@ resource "google_compute_instance" "production" {
   }
 
   metadata = {
-    ssh-keys = "${var.ssh_username}:${local.ssh_public_key}"
+    ssh-keys = local.ssh_keys_metadata
   }
 
   shielded_instance_config {

@@ -149,10 +149,21 @@ variable "ssh_username" {
   default     = "ubuntu"
 }
 
-variable "ssh_public_key_path" {
-  description = "Ruta local al archivo .pub. Es una ruta de la maquina que ejecuta Terraform, no un recurso de la nube."
+variable "ssh_public_key_paths" {
+  description = "Rutas locales a los .pub autorizados en las VMs (una por integrante). Son rutas de la maquina que ejecuta Terraform, no recursos de la nube."
+  type        = list(string)
+  default     = ["~/.ssh/academix_pass_ed25519.pub"]
+
+  validation {
+    condition     = length(var.ssh_public_key_paths) > 0
+    error_message = "ssh_public_key_paths debe tener al menos una clave publica."
+  }
+}
+
+variable "ssh_private_key_path" {
+  description = "Clave privada que usa Ansible (se escribe en el inventario). Debe corresponder a una de ssh_public_key_paths."
   type        = string
-  default     = "~/.ssh/academix_pass_ed25519.pub"
+  default     = "~/.ssh/academix_pass_ed25519"
 }
 
 # Reglas de firewall.

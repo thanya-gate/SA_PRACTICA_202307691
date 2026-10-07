@@ -1,0 +1,20 @@
+<mxfile host="app.diagrams.net"><diagram name="Flujo" id="Flujo"><mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" page="1" pageWidth="1400" pageHeight="900"><root><mxCell id="0"/><mxCell id="1" parent="0"/>
+<mxCell id="a" value="terraform apply" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;" vertex="1" parent="1"><mxGeometry x="20" y="200" width="140" height="60" as="geometry"/></mxCell>
+<mxCell id="b" value="VPC + subredes&lt;br&gt;+ firewall" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="200" y="200" width="140" height="60" as="geometry"/></mxCell>
+<mxCell id="c" value="2 VMs Ubuntu 24.04&lt;br&gt;clave SSH en metadatos" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="380" y="200" width="160" height="60" as="geometry"/></mxCell>
+<mxCell id="d" value="local_file →&lt;br&gt;ansible/inventory.ini" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1"><mxGeometry x="580" y="200" width="160" height="60" as="geometry"/></mxCell>
+<mxCell id="e" value="ansible-playbook&lt;br&gt;site.yml" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;" vertex="1" parent="1"><mxGeometry x="780" y="200" width="150" height="60" as="geometry"/></mxCell>
+<mxCell id="f" value="rol base (todas)&lt;br&gt;SSH/cloud-init, apt,&lt;br&gt;utilitarios, hardening" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="970" y="200" width="170" height="70" as="geometry"/></mxCell>
+<mxCell id="g" value="rol docker (development)&lt;br&gt;Docker + Compose,&lt;br&gt;grupo docker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1"><mxGeometry x="1180" y="100" width="180" height="70" as="geometry"/></mxCell>
+<mxCell id="h" value="rol k3s (production)&lt;br&gt;K3s server, nodo Ready,&lt;br&gt;kubeconfig local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1"><mxGeometry x="1180" y="300" width="180" height="70" as="geometry"/></mxCell>
+<mxCell id="i" value="Estado listo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1"><mxGeometry x="1410" y="200" width="120" height="60" as="geometry"/></mxCell>
+<mxCell id="1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="a" target="b"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="b" target="c"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="c" target="d"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="d" target="e"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="e" target="f"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="f" target="g"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="f" target="h"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="8" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="g" target="i"><mxGeometry relative="1" as="geometry"/></mxCell>
+<mxCell id="9" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="h" target="i"><mxGeometry relative="1" as="geometry"/></mxCell>
+</root></mxGraphModel></diagram></mxfile>
