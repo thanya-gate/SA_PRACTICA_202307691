@@ -1,4 +1,8 @@
 ---
+# apt upgrade completo. La practica pide actualizar repositorios (apt update);
+# el upgrade de todo el sistema es opcional por el tiempo que toma.
+base_apt_upgrade: false
+
 base_packages:
   - git
   - curl

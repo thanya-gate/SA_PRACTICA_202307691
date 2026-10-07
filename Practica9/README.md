@@ -154,9 +154,9 @@ KUBECONFIG=kubeconfig/k3s.yaml kubectl get nodes
 
 | Rol | Hosts | Qué hace |
 |---|---|---|
-| `base` | todos | Espera a que la VM acepte SSH (`wait_for_connection`) y a que termine `cloud-init`. Luego hace `apt update` + `upgrade`, instala `git`, `curl`, `htop`, `net-tools` y `fail2ban`, y endurece SSH con un drop-in `00-hardening.conf` (sin root, sin contraseña, `MaxAuthTries 3`). El handler valida con `sshd -t` antes de reiniciar. |
+| `base` | todos | Espera a que la VM acepte SSH (`wait_for_connection`) y a que termine `cloud-init`. Luego hace `apt update` (el `upgrade` completo es opcional con `-e base_apt_upgrade=true`, porque en la e2-micro tarda más de 30 min), instala `git`, `curl`, `htop`, `net-tools` y `fail2ban`, y endurece SSH con un drop-in `00-hardening.conf` (sin root, sin contraseña, `MaxAuthTries 3`). El handler valida con `sshd -t` antes de reiniciar. |
 | `docker` | development | Agrega el repositorio oficial de Docker (clave en `/etc/apt/keyrings`, formato deb822) e instala `docker-ce`, `containerd`, `buildx` y `docker-compose-plugin`. Agrega los usuarios al grupo `docker`, reconecta y verifica `docker compose version` sin `sudo`. |
-| `k3s` | production | Instala K3s, con versión fija, en modo `server` con `--tls-san <IP pública>` y `--node-ip <IP interna>`. Espera el puerto 6443 y el nodo `Ready`, y copia el kubeconfig a la máquina local reemplazando `127.0.0.1` por la IP pública. |
+| `k3s` | production | Escribe `/etc/rancher/k3s/config.yaml` (`node-name` corto, porque el FQDN de GCP supera los 63 caracteres que admite una etiqueta de Kubernetes; `tls-san` con la IP pública y `node-ip` interna) e instala K3s con versión fija en modo `server`. Espera el puerto 6443 y el nodo `Ready`, y copia el kubeconfig a la máquina local reemplazando `127.0.0.1` por la IP pública. |
 
 ### Idempotencia
 
@@ -182,6 +182,8 @@ ansible-playbook -i inventory.ini site.yml
 KUBECONFIG=kubeconfig/k3s.yaml kubectl get nodes
 ssh -i ~/.ssh/academix_pass_ed25519 ubuntu@$(cd ../terraform && terraform output -raw development_public_ip) docker compose version
 ```
+
+**Ensayo realizado (06/10/2026):** destroy 1,5 min → apply 1 min (14 recursos) → Ansible 5 min, 0 fallos → nodo `Ready` desde la máquina de administración.
 
 ## 8. Matriz de decisiones técnicas
 

@@ -34,10 +34,13 @@
     cache_valid_time: 3600
     lock_timeout: 300
 
-- name: Aplicar actualizaciones de seguridad y paquetes
+# Desactivado por defecto: en una VM recien creada baja el kernel completo y
+# en la e2-micro tarda mas de 30 min. Activar con -e base_apt_upgrade=true.
+- name: Aplicar actualizaciones de paquetes (opcional)
   ansible.builtin.apt:
     upgrade: safe
     lock_timeout: 300
+  when: base_apt_upgrade | bool
 
 - name: Instalar utilitarios base
   ansible.builtin.apt:
