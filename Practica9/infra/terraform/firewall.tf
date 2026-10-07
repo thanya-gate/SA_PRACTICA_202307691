@@ -160,7 +160,8 @@ resource "google_compute_firewall" "allow_egress" {
   direction = "EGRESS"
   priority  = 1000
 
-  source_ranges = ["0.0.0.0/0"]
+  # En una regla EGRESS el rango relevante es el destino, no el origen.
+  destination_ranges = ["0.0.0.0/0"]
 
   allow {
     protocol = "all"

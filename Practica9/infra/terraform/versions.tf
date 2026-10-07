@@ -17,5 +17,10 @@ terraform {
       # ~> 6.x = cualquier 6.x, pero nunca 7.x.
       version = "~> 6.0"
     }
+    # Escribe el inventario de Ansible con las IPs resueltas (ansible.tf).
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
+    }
   }
 }

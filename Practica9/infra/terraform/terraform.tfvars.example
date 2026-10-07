@@ -54,8 +54,13 @@ boot_disk_size_gb = 30
 
 # --- Acceso SSH -------------------------------------------------------------
 
-ssh_username        = "ubuntu"
-ssh_public_key_path = "~/.ssh/academix_pass_ed25519.pub"
+ssh_username = "ubuntu"
+# Una .pub por integrante; todas quedan autorizadas en ambas VMs.
+ssh_public_key_paths = [
+  "~/.ssh/academix_pass_ed25519.pub",
+  # "~/.ssh/companero_ed25519.pub",
+]
+ssh_private_key_path = "~/.ssh/academix_pass_ed25519"
 
 # --- Firewall ---------------------------------------------------------------
 

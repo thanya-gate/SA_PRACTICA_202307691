@@ -87,16 +87,16 @@ output "production_instance_id" {
 }
 
 # Comandos listos para copiar.
-# trimsuffix quita ".pub" para apuntar a la clave PRIVADA; sin eso el comando
-# falla con "Permission denied (publickey)".
+# Se usa la clave PRIVADA; con la .pub el comando falla con
+# "Permission denied (publickey)".
 output "ssh_command_development" {
   description = "Comando SSH completo para entrar a vm-development."
-  value       = "ssh -i ${trimsuffix(pathexpand(var.ssh_public_key_path), ".pub")} ${var.ssh_username}@${google_compute_instance.development.network_interface[0].access_config[0].nat_ip}"
+  value       = "ssh -i ${pathexpand(var.ssh_private_key_path)} ${var.ssh_username}@${google_compute_instance.development.network_interface[0].access_config[0].nat_ip}"
 }
 
 output "ssh_command_production" {
   description = "Comando SSH completo para entrar a vm-production-k3s."
-  value       = "ssh -i ${trimsuffix(pathexpand(var.ssh_public_key_path), ".pub")} ${var.ssh_username}@${google_compute_instance.production.network_interface[0].access_config[0].nat_ip}"
+  value       = "ssh -i ${pathexpand(var.ssh_private_key_path)} ${var.ssh_username}@${google_compute_instance.production.network_interface[0].access_config[0].nat_ip}"
 }
 
 output "ssh_command_production_via_iap" {
