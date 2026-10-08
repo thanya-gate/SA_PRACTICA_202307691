@@ -74,15 +74,14 @@ export async function consultarDisponibilidad(
   const id = encodeURIComponent(eventoId.trim());
   const dto = await pedir<{
     eventoId: string;
-    cuposDisponibles: number;
-    cuposTotales: number;
-    estado: number;
+    disponibles: number;
+    totales: number;
+    admite: boolean;
   }>(apiConfig.catalogo, `/api/talleres/eventos/${id}/disponibilidad`, opciones);
   return {
-    disponibles: Number(dto.cuposDisponibles ?? 0),
-    total: Number(dto.cuposTotales ?? 0),
-    // 1 PROGRAMADO y 2 EN_CURSO son los unicos estados que admiten reserva.
-    admiteReserva: dto.estado === 1 || dto.estado === 2,
+    disponibles: Number(dto.disponibles ?? 0),
+    total: Number(dto.totales ?? 0),
+    admiteReserva: Boolean(dto.admite),
   };
 }
 
