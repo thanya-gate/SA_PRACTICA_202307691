@@ -63,7 +63,7 @@ flujo de aprovisionamiento solicitados para Práctica 9.
 ### 2.1 Objetivo general
 
 Documentar y hacer trazable la evolución del sistema satélite desde los flujos
-de Práctica 7 hasta una arquitectura SOA con reserva asíncrona, persistencia,
+de Práctica 8 hasta una arquitectura SOA con reserva asíncrona, persistencia,
 infraestructura reproducible con Terraform y configuración automatizada con
 Ansible para los entornos de desarrollo y producción.
 
