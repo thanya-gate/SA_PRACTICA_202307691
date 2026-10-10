@@ -1,8 +1,8 @@
 # Documento técnico actualizado — YOUSAC Academix Pass & CertiHub
 
-**Práctica:** 8 (continúacion de la documentación de Práctica 7)
+**Práctica:** 9 (documentación evolutiva de las Prácticas 7 y 8)
 **Curso:** Software Avanzado
-**Institución:** Universidad de San Carlos de Guatemal
+**Institución:** Universidad de San Carlos de Guatemala
 
 ## Índice
 
@@ -33,7 +33,8 @@
 19. [Arquitectura física de la VM de desarrollo](#19-arquitectura-física-de-la-vm-de-desarrollo)
 20. [Matriz SOLID: productores y consumidores](#20-matriz-solid-productores-y-consumidores)
 21. [Pipeline, enlaces y verificación](#21-pipeline-enlaces-y-verificación)
-22. [Conclusiones](#22-conclusiones)
+22. [Infraestructura como código y configuración automatizada (Práctica 9)](#22-infraestructura-como-código-y-configuración-automatizada-práctica-9)
+23. [Conclusiones](#23-conclusiones)
 
 ## 1. Introducción
 
@@ -51,17 +52,20 @@ credenciales digitales.
 Práctica 7 definió las vistas, los contratos y la experiencia de usuario. En
 Práctica 8 se implementaron los servicios de Catálogo y Certificados en
 TypeScript, el productor de Reservas en Go, un worker consumidor en Python,
-RabbitMQ, Redis y bases PostgreSQL separadas. El frontend Next.js ya usa un
-adaptador HTTP real en el código; su publicación con los endpoints de la VM
-requiere configurar y verificar el despliegue de Vercel.
+RabbitMQ, Redis y bases PostgreSQL separadas. Práctica 9 agrega el
+aprovisionamiento declarativo de la red y las máquinas con Terraform, y la
+configuración de sus sistemas operativos con Ansible. Este documento conserva
+la trazabilidad de las tres fases e incorpora la arquitectura de red y el
+flujo de aprovisionamiento solicitados para Práctica 9.
 
 ## 2. Objetivos
 
 ### 2.1 Objetivo general
 
 Documentar y hacer trazable la evolución del sistema satélite desde los flujos
-de Práctica 7 hasta una arquitectura SOA con reserva asíncrona, persistencia y
-despliegue reproducible en una VM de desarrollo.
+de Práctica 7 hasta una arquitectura SOA con reserva asíncrona, persistencia,
+infraestructura reproducible con Terraform y configuración automatizada con
+Ansible para los entornos de desarrollo y producción.
 
 ### 2.2 Objetivos específicos
 
@@ -1060,12 +1064,98 @@ los volúmenes, la ejecución del workflow y los enlaces del registry. Estas
 comprobaciones requieren evidencia operativa; no se marcan como realizadas
 por el solo hecho de documentar el diseño.
 
-## 22. Conclusiones
+## 22. Infraestructura como código y configuración automatizada (Práctica 9)
 
-Práctica 8 convierte el modelo de Práctica 7 en una malla SOA con aceptación
-rápida de solicitudes, procesamiento asíncrono y persistencia separada. El
-productor no promete cupo al responder `202`; el worker resuelve después y el
-cliente consulta el resultado. Los diagramas y la matriz SOLID muestran dónde
-están esos límites de responsabilidad. Para cerrar la entrega aún deben
-adjuntarse las evidencias públicas de Vercel integrado, la VM, GHCR, el
-pipeline y el tag de versión que correspondan al despliegue real.
+Práctica 9 automatiza la creación de la infraestructura de Google Cloud con
+Terraform y configura las dos máquinas con Ansible. La vista de red muestra la
+VPC, las subredes, las rutas y las reglas de firewall; la vista de procesos
+resume el paso de Terraform a Ansible y al estado operativo esperado.
+
+### 22.1 Arquitectura de red en la nube
+
+![Arquitectura de red en la nube de Práctica 9](Vistas4+1/VistaFisica_RedNube_P9_G4.drawio.svg)
+
+[Fuente editable del diagrama de red](Vistas4+1/XML/VistaFisica_RedNube_P9_G4.drawio)
+
+La red `vpc-academix-pass` usa el rango `10.10.0.0/16` y contiene dos
+subredes en `us-central1`: `subnet-development` (`10.10.1.0/24`) y
+`subnet-production` (`10.10.2.0/24`). Las rutas locales conectan las
+subredes y la ruta `0.0.0.0/0` dirige el egreso al gateway de Internet. Las
+VMs usan las IP privadas estáticas `10.10.1.10` y `10.10.2.10`; sus IP
+públicas se asignan de forma efímera y Terraform las imprime como outputs.
+
+El firewall permite SSH (TCP 22), HTTP (TCP 80) y HTTPS (TCP 443) según los
+CIDR configurados; el estado observado usa `0.0.0.0/0` para esos accesos.
+También permite la API de K3s (TCP 6443) en producción y el tráfico interno
+del clúster desde la VPC. Los puertos internos de K3s no se exponen
+globalmente. Las reglas se asocian a las VMs mediante etiquetas de destino
+(`target_tags`). Para un entorno real, los CIDR de SSH y de la API deben
+restringirse a los administradores autorizados.
+
+### 22.2 Flujo de aprovisionamiento
+
+![Flujo de aprovisionamiento de Práctica 9](Vistas4+1/VistaProcesos_Aprovisionamiento_P9_G4.drawio.svg)
+
+[Fuente editable del flujo de aprovisionamiento](Vistas4+1/XML/VistaProcesos_Aprovisionamiento_P9_G4.drawio)
+
+Terraform crea la red, las subredes, las reglas de firewall y las dos VMs.
+Sus outputs proporcionan las IPs públicas, que alimentan el inventario de
+Ansible generado por `local_file`. Después, `site.yml` aplica el rol base a
+ambas máquinas y ejecuta los roles específicos: Docker Compose en desarrollo
+y K3s server en producción. El resultado esperado es una VM de desarrollo
+lista para Compose, un nodo K3s `Ready` y el `kubeconfig` disponible en la
+máquina de administración. Para la demostración de reconstrucción desde cero,
+el orden requerido es `terraform destroy`, `terraform apply` y
+`ansible-playbook -i inventory.ini site.yml`.
+
+### 22.3 Matriz de decisiones técnicas
+
+#### ¿Por qué Terraform frente a CloudFormation o scripts manuales?
+
+| Criterio | Terraform | AWS CloudFormation | Scripts manuales (`gcloud`/bash) |
+|---|---|---|---|
+| Soporte de Google Cloud | Proveedor `google` nativo | Específico de AWS | Posible con `gcloud` |
+| Modelo | Declarativo: estado deseado | Declarativo: stacks | Imperativo: secuencia de comandos |
+| Estado y detección de cambios | `tfstate` y `terraform plan` muestran diferencias | Estado del stack y detección de drift | No hay estado central ni comparación integrada |
+| Vista previa | `terraform plan` antes de aplicar | Change sets | Debe programarse manualmente |
+| Destrucción | `terraform destroy` respeta dependencias | Eliminación del stack | Hay que implementar el orden inverso |
+| Decisión | Adecuado para administrar esta infraestructura de GCP con módulos, estado y plan revisable | No corresponde al proveedor de nube usado | Útil para tareas puntuales, pero menos reproducible y auditable |
+
+#### ¿Por qué Ansible frente a Dockerfiles en el sistema operativo base?
+
+| Criterio | Ansible | Dockerfiles |
+|---|---|---|
+| Qué configura | El sistema operativo anfitrión: paquetes, usuarios, SSH y servicios | El sistema de archivos y procesos dentro de una imagen de contenedor |
+| Instalar Docker o K3s en la VM | Sí; administra el host remoto por SSH | No; la imagen se ejecuta sobre un motor ya instalado y no administra systemd del host |
+| Idempotencia | Los módulos convergen al estado declarado y pueden volver a ejecutarse | `docker build` crea una imagen; no reconcilia la configuración del host |
+| Varios entornos | Inventario y grupos separan `development` y `production` | No administra por sí solo varios hosts |
+| Decisión | Configura de forma automatizada los sistemas operativos de las VMs | Sigue siendo útil para empaquetar los servicios de aplicación; complementa a Ansible |
+
+### 22.4 Estado observado del despliegue
+
+| Recurso | Estado observado el 09/10/2026 |
+|---|---|
+| `vm-development` | Activa; Docker y Docker Compose instalados. No había contenedores de Academix ejecutándose en esa VM. |
+| `vm-production-k3s` | Activa; K3s v1.33.5+k3s1 y nodo `Ready`. |
+| Workloads de producción | 9 pods listos: APIs de Catálogo, Reservas y Certificados; `reservation-worker`; RabbitMQ; Redis; y tres instancias PostgreSQL. |
+| APIs | Las tres rutas de salud respondieron `HTTP 200` por HTTPS en `academix.34.29.246.70.sslip.io`. El preflight CORS aceptó `https://sa-practica7.vercel.app`. |
+| RabbitMQ | `academix.reservas.solicitudes`: 1 consumidor y 0 mensajes pendientes; la cola de mensajes muertos estaba vacía. |
+| Frontend Vercel | Quedaba pendiente configurar las variables `NEXT_PUBLIC_API_*` para Production y generar un nuevo deployment para conectar la interfaz con estas APIs. |
+
+La validación de salud y conectividad no equivale a una reserva completa: no
+se creó una reserva de prueba en producción para no alterar cupos ni registrar
+datos de usuario. En esta revisión tampoco se ejecutó `terraform apply`,
+`terraform destroy` ni Ansible sobre las VMs activas; la prueba destructiva de
+reconstrucción debe presentarse en la demostración acordada. Los manifiestos y
+los pasos reproducibles del despliegue en K3s están en la
+[guía de despliegue de Práctica 9](../../../Practica9/deploy/kubernetes/README.md).
+
+## 23. Conclusiones
+
+Las Prácticas 7, 8 y 9 documentan la evolución de Academix Pass & CertiHub:
+desde sus casos de uso y vistas, hasta una arquitectura SOA asíncrona y una
+infraestructura declarativa. La vista física identifica la red, las rutas y
+los puertos; la vista de procesos explica cómo Terraform y Ansible preparan
+los entornos de desarrollo y producción. Las matrices justifican el uso
+complementario de Terraform, Ansible y Dockerfiles según la responsabilidad
+de cada herramienta.
