@@ -31,6 +31,8 @@ El objetivo verificable es que tres comandos destruyan y reconstruyan todo el en
 ```
 Practica9/
 ├── README.md                      # este documento
+├── deploy/
+│   └── kubernetes/                # manifiestos para desplegar Academix en K3s
 ├── docs/
 │   ├── arquitectura-red.drawio     # diagrama de red (archivo crudo)
 │   └── flujo-aprovisionamiento.drawio
@@ -76,8 +78,8 @@ flowchart TB
         end
     end
 
-    internet -- "22, 80, 443" --> fw
-    admin -- "SSH 22 (Ansible) · 6443 (kubectl)" --> fw
+    internet -- "22, 80, 443, 6443 (según CIDR configurado)" --> fw
+    admin -- "SSH 22 (gcloud/Ansible) · API 6443 (kubectl)" --> fw
     fw -- "22, 80, 443" --> dev
     fw -- "22, 80, 443, 6443" --> prod
     dev <-- "todo el tráfico interno (10.10.0.0/16)" --> prod
@@ -158,6 +160,31 @@ KUBECONFIG=kubeconfig/k3s.yaml kubectl get nodes
 | `docker` | development | Agrega el repositorio oficial de Docker (clave en `/etc/apt/keyrings`, formato deb822) e instala `docker-ce`, `containerd`, `buildx` y `docker-compose-plugin`. Agrega los usuarios al grupo `docker`, reconecta y verifica `docker compose version` sin `sudo`. |
 | `k3s` | production | Escribe `/etc/rancher/k3s/config.yaml` (`node-name` corto, porque el FQDN de GCP supera los 63 caracteres que admite una etiqueta de Kubernetes; `tls-san` con la IP pública y `node-ip` interna) e instala K3s con versión fija en modo `server`. Espera el puerto 6443 y el nodo `Ready`, y copia el kubeconfig a la máquina local reemplazando `127.0.0.1` por la IP pública. |
 
+### Despliegue y verificación de Academix en producción (09/10/2026)
+
+Se revisaron las dos VMs y se desplegó la aplicación en `vm-production-k3s`, dentro del namespace `academix-prod`. La infraestructura usa la VPC regional `vpc-academix-pass`, subredes `10.10.1.0/24` y `10.10.2.0/24`, rutas locales y ruta por defecto hacia el gateway de Internet.
+
+| Componente | Resultado observado |
+|---|---|
+| `vm-development` | `RUNNING`; servicio Docker activo; Docker 29.8.2 y Docker Compose v5.6.0 disponibles. |
+| `vm-production-k3s` | `RUNNING`; servicio K3s activo, versión v1.33.5+k3s1. |
+| Nodo K3s | `vm-production-k3s` aparece `Ready`. |
+| Aplicación | 9 pods `Running` y `Ready`: tres APIs, worker, RabbitMQ, Redis y tres PostgreSQL. |
+| APIs públicas | Catálogo, reservas y certificados responden `HTTP 200` por HTTPS en `academix.34.29.246.70.sslip.io`; certificado TLS emitido por Let's Encrypt mediante cert-manager. |
+| Frontend de Vercel | Se confirmó por preflight CORS que las tres APIs permiten el origen `https://sa-practica7.vercel.app`. Para que el frontend use producción, falta guardar sus tres variables `NEXT_PUBLIC_API_*` en el entorno Production de Vercel y redeplegar. |
+| Mensajería | RabbitMQ muestra la cola `academix.reservas.solicitudes` con 1 consumidor y 0 mensajes pendientes; la cola de mensajes muertos está vacía. |
+| Reglas de red | Las reglas esperadas están presentes. SSH (22) y API K3s (6443) aceptan origen `0.0.0.0/0`; los puertos internos de K3s quedan limitados a la VPC `10.10.0.0/16`. |
+
+El catálogo se consultó mediante `GET` y devolvió los eventos sembrados. No se envió una reserva de prueba a producción para no consumir una plaza ni crear datos de usuario reales. La verificación confirma disponibilidad de servicios, CORS, TLS y consumidor RabbitMQ; la operación de reserva debe probarse desde el frontend después de actualizar sus variables de Vercel.
+
+La aplicación se desplegó con los manifiestos de `deploy/kubernetes/`. Las imágenes de los cuatro componentes de aplicación se construyeron desde el código de esta rama y se importaron en el containerd de K3s; las cargas de trabajo usan `imagePullPolicy: Never`. Las instrucciones reproducibles están en [`deploy/kubernetes/README.md`](deploy/kubernetes/README.md). Los secretos se crearon directamente en Kubernetes y no se guardaron en archivos versionados.
+
+En esta revisión no se ejecutaron `terraform destroy`, `terraform apply` ni `ansible-playbook`, para no reemplazar infraestructura ya activa. El inventario Ansible no está generado en este checkout, así que la idempotencia y la reconstrucción automatizada no se volvieron a ejecutar.
+
+Se generó un plan local de Terraform (`-refresh=false`) basado en el `terraform.tfstate` disponible y con las variables SSH apuntando temporalmente a la clave gcloud de este perfil. El plan indicó `0 to add, 2 to change, 0 to destroy`: ambos cambios son en los metadatos `ssh-keys` de las VMs, porque la clave disponible es distinta a la clave pública configurada originalmente. Como el plan no refrescó el estado remoto, no se usó para validar drift. **No se aplicó**: reemplazaría la clave SSH configurada y no desplegaría contenedores de Academix. Para un plan normal del equipo, hay que usar la clave pública prevista en `ssh_public_key_paths` y revisar el resultado antes de aplicar.
+
+El ensayo del 06/10/2026 citado más adelante corresponde al registro previo del equipo, no a una repetición realizada durante esta revisión.
+
 ### Idempotencia
 
 Ejecutar `site.yml` dos veces seguidas deja la segunda corrida con `changed=0`. Para lograrlo:
@@ -183,7 +210,7 @@ KUBECONFIG=kubeconfig/k3s.yaml kubectl get nodes
 ssh -i ~/.ssh/academix_pass_ed25519 ubuntu@$(cd ../terraform && terraform output -raw development_public_ip) docker compose version
 ```
 
-**Ensayo realizado (06/10/2026):** destroy 1,5 min → apply 1 min (14 recursos) → Ansible 5 min, 0 fallos → nodo `Ready` desde la máquina de administración.
+**Ensayo registrado por el equipo (06/10/2026):** destroy 1,5 min → apply 1 min (14 recursos) → Ansible 5 min, 0 fallos → nodo `Ready` desde la máquina de administración. La sesión de verificación del 09/10/2026 consultó las VMs existentes y no repitió la prueba destructiva.
 
 ## 8. Matriz de decisiones técnicas
 
@@ -219,6 +246,7 @@ ssh -i ~/.ssh/academix_pass_ed25519 ubuntu@$(cd ../terraform && terraform output
 ## 9. Seguridad
 
 - **Archivos fuera del repositorio:** `*.tfstate`, `*.tfvars`, `inventory.ini`, `kubeconfig/` y las claves privadas.
+- **Estado Terraform local:** `infra/terraform/terraform.tfstate` existe para esta infraestructura y está excluido por `infra/terraform/.gitignore`. Contiene datos del entorno y no debe agregarse ni adjuntarse al repositorio.
 - **Autenticación SSH:** solo con clave pública. La contraseña y el login de root están deshabilitados, y `fail2ban` está activo.
 - **Puertos internos de K3s** (etcd, kubelet, flannel): solo se aceptan desde la VPC.
 - **Limitación conocida:** 22 y 6443 están abiertos a `0.0.0.0/0` para que el evaluador pueda conectarse durante la demostración. En producción real se restringirían a la IP del administrador o a Identity-Aware Proxy (`35.235.240.0/20`). Ver `terraform.tfvars.example`.
