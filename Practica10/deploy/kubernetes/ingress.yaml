@@ -1,0 +1,83 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: academix-prod-tls
+spec:
+  secretName: academix-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - academix.34.29.246.70.sslip.io
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: catalogo-api
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: academix-prod-redirect-https@kubernetescrd,academix-prod-strip-catalogo@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - academix.34.29.246.70.sslip.io
+      secretName: academix-prod-tls
+  rules:
+    - host: academix.34.29.246.70.sslip.io
+      http:
+        paths:
+          - path: /catalogo
+            pathType: Prefix
+            backend:
+              service:
+                name: catalogo-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reservas-api
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: academix-prod-redirect-https@kubernetescrd,academix-prod-strip-reservas@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - academix.34.29.246.70.sslip.io
+      secretName: academix-prod-tls
+  rules:
+    - host: academix.34.29.246.70.sslip.io
+      http:
+        paths:
+          - path: /reservas
+            pathType: Prefix
+            backend:
+              service:
+                name: reservas-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: certificados-api
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: academix-prod-redirect-https@kubernetescrd,academix-prod-strip-certificados@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - academix.34.29.246.70.sslip.io
+      secretName: academix-prod-tls
+  rules:
+    - host: academix.34.29.246.70.sslip.io
+      http:
+        paths:
+          - path: /certificados
+            pathType: Prefix
+            backend:
+              service:
+                name: certificados-service
+                port:
+                  number: 8080
