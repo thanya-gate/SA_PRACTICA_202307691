@@ -32,7 +32,6 @@ Practica10/deploy/kubernetes/
 ├── ingress.yaml                    # Certificate (cert-manager) + 3 Ingress
 ├── traefik-middlewares.yaml        # redirect-https y strip-prefix
 ├── cluster-issuer.yaml             # ClusterIssuer letsencrypt-prod (se aplica aparte)
-├── ghcr-pull-secret.example.yaml   # plantilla del imagePullSecret (sin credenciales)
 └── kustomization.yaml              # orquesta todo y fija el tag de las imágenes
 ```
 
@@ -41,23 +40,20 @@ Practica10/deploy/kubernetes/
 - Clúster K3s con nodo `Ready` (creado por Terraform + Ansible de la Práctica 9).
 - `kubectl` configurado (`$env:KUBECONFIG = "Practica9/infra/ansible/kubeconfig/k3s.yaml"`).
 - `cert-manager` instalado y el `ClusterIssuer` aplicado.
-- Imágenes `4.0.0` publicadas en GHCR (las construye el workflow
-  `.github/workflows/practica8-ci-cd.yml` al empujar el tag `V4.0.0`).
+- Imágenes publicadas en GHCR con la etiqueta indicada en `kustomization.yaml`
+  (`ghcr.io/thanya-gate/academix/<servicio>:<tag>`). Los paquetes son **públicos**,
+  así que K3s las descarga sin credenciales adicionales.
 
-> **Nota sobre el tag:** el documento de la práctica pide el tag `V3.0.0`, pero este despliegue usa `4.0.0` por decisión del equipo. Para usar ese tag basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar) y publicar las imágenes correspondientes.
+> **Nota sobre el tag:** durante el desarrollo se usa la imagen **`3.0.0`** (ya publicada en GHCR). Al cierre de la práctica se creará el tag final `V4.0.0`; el CI publicará las imágenes `4.0.0` y basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar) para dejarlo como versión de entrega.
 
 ## Procedimiento
 
 Todo se ejecuta desde la raíz del repositorio en PowerShell.
 
-1. **Autorizar la descarga desde GHCR.** Los paquetes son privados, así que se crea un `imagePullSecret`. El token (PAT) necesita el permiso `read:packages`:
+1. **Crear el namespace.** Los paquetes de GHCR son públicos, así que **no se necesita `imagePullSecret`**: K3s descarga las imágenes sin credenciales.
 
    ```powershell
    kubectl create namespace academix-prod --dry-run=client -o yaml | kubectl apply -f -
-   kubectl create secret docker-registry ghcr-pull-secret -n academix-prod `
-     --docker-server=ghcr.io `
-     --docker-username=<usuario-github> `
-     --docker-password=<PAT-con-read:packages>
    ```
 
 2. **Instalar cert-manager y el issuer** (si no están):
@@ -113,5 +109,5 @@ Todo se ejecuta desde la raíz del repositorio en PowerShell.
 - **Deployments con límites:** `workloads.yaml` y `data.yaml` declaran `resources.requests/limits`.
 - **Services ClusterIP:** todos los `Service` de aplicación usan `type: ClusterIP`; la comunicación es por DNS interno (`catalogo-service:50061`, `rabbitmq:5672`, etc.).
 - **Ingress Controller:** `ingress.yaml` expone `/reservas` y `/certificados` (verificación) además de `/catalogo`, con redirección a HTTPS y certificado Let's Encrypt.
-- **ConfigMaps y Secrets:** configuración común en `academix-config-comun`, secretos en `academix-secrets` y `ghcr-pull-secret`; el SQL se monta desde ConfigMaps. Nada de credenciales en los manifiestos versionados.
-- **Container Registry:** `imagePullPolicy: Always` + `imagePullSecrets`; las imágenes provienen de GHCR y nunca se compilan dentro del clúster.
+- **ConfigMaps y Secrets:** configuración común en `academix-config-comun`, credenciales en `academix-secrets`; el SQL se monta desde ConfigMaps. Nada de credenciales en los manifiestos versionados.
+- **Container Registry:** `imagePullPolicy: Always`; las imágenes provienen de GHCR (paquetes públicos) y nunca se compilan dentro del clúster.
