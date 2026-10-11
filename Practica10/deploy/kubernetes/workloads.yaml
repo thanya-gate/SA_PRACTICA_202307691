@@ -35,8 +35,6 @@ spec:
         app.kubernetes.io/name: catalogo-service
         app.kubernetes.io/part-of: academix
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
         - name: catalogo-service
           image: ghcr.io/thanya-gate/academix/catalogo-service
@@ -51,7 +49,7 @@ spec:
                 name: academix-config-comun
           env:
             - name: CATALOGO_VERSION
-              value: "4.0.0"
+              value: "3.0.0"
             - name: CATALOGO_HTTP_PUERTO
               value: "8080"
             - name: CATALOGO_GRPC_PUERTO
@@ -137,8 +135,6 @@ spec:
         app.kubernetes.io/name: certificados-service
         app.kubernetes.io/part-of: academix
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
         - name: certificados-service
           image: ghcr.io/thanya-gate/academix/certificados-service
@@ -153,7 +149,7 @@ spec:
                 name: academix-config-comun
           env:
             - name: CERTIFICADOS_VERSION
-              value: "4.0.0"
+              value: "3.0.0"
             - name: CERTIFICADOS_HTTP_PUERTO
               value: "8080"
             - name: CERTIFICADOS_GRPC_PUERTO
@@ -238,8 +234,6 @@ spec:
         app.kubernetes.io/name: reservas-service
         app.kubernetes.io/part-of: academix
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
         - name: reservas-service
           image: ghcr.io/thanya-gate/academix/reservas-service
@@ -254,7 +248,7 @@ spec:
                 name: academix-config-comun
           env:
             - name: VERSION_SERVICIO
-              value: "4.0.0"
+              value: "3.0.0"
             - name: PUERTO_HTTP
               value: "8080"
             - name: PUERTO_GRPC
@@ -331,8 +325,6 @@ spec:
         app.kubernetes.io/name: reservation-worker
         app.kubernetes.io/part-of: academix
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       containers:
         - name: reservation-worker
           image: ghcr.io/thanya-gate/academix/reservation-worker
