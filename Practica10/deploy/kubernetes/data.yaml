@@ -82,20 +82,24 @@ spec:
           readinessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "-q", "ping"]
-            periodSeconds: 10
-            timeoutSeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 20
             failureThreshold: 8
+          # Liveness por TCP: rabbitmq-diagnostics arranca una VM Erlang en cada
+          # chequeo y en la e2-medium (CPU compartida) superaba el timeout bajo
+          # carga, con lo que Kubernetes mataba un broker sano.
           livenessProbe:
-            exec:
-              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            tcpSocket:
+              port: amqp
             periodSeconds: 20
-            timeoutSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 250m
+              memory: 256Mi
             limits:
-              cpu: 500m
+              cpu: "1"
               memory: 512Mi
           volumeMounts:
             - name: data

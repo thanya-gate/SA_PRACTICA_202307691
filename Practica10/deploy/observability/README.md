@@ -10,48 +10,41 @@ dashboards:
 | Academix · Infraestructura | CPU/memoria de pods, nodos listos, pods por fase, tráfico de red |
 | Academix · Negocio y Colas | Longitud de cola de solicitudes, tasas de publicación/consumo, tickets emitidos (acumulado) |
 
-> **Reparto de la práctica (3 personas):**
-> - **Prometheus (hecho y verificado):** stack `kube-prometheus-stack` instalado
->   en `monitoring` (Grafana y Alertmanager deshabilitados), `ServiceMonitor
->   academix-rabbitmq` aplicado, targets `rabbitmq`, `node-exporter` y
->   `kube-state-metrics` en `up`, consultas de colas/CPU/nodos respondiendo.
-> - **Grafana (pendiente, compañero):** habilitar Grafana en el stack y aplicar
->   `kubectl apply -k` (dashboards + Ingress) con este paquete.
+**Estado: desplegado y verificado.**
 
-## 1. Instalar el stack (una sola vez)
+- Grafana público (solo lectura, sin login): <https://grafana.academix.34.29.246.70.sslip.io>
+- Los 12 paneles de los 2 dashboards devuelven datos (comprobado con `/api/ds/query`).
 
-Se usa `kube-prometheus-stack` vía Helm, desde la máquina administrativa con el
-`kubeconfig` apuntando al clúster K3s.
+## 1. Crear la contraseña de admin (una sola vez)
 
-```powershell
+La contraseña no se versiona: vive en un Secret que el chart lee con `admin.existingSecret`.
+
+```bash
+kubectl create secret generic grafana-admin -n monitoring \
+  --from-literal=admin-user=admin --from-literal=admin-password="$(openssl rand -base64 18)"
+# Para leerla: kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+## 2. Instalar / actualizar el stack
+
+Todos los valores están en `grafana-values.yaml` (Grafana habilitado, acceso anónimo
+Viewer, datasource con `uid: prometheus`, sidecar de dashboards, Alertmanager deshabilitado).
+
+```bash
+export KUBECONFIG=Practica9/infra/ansible/kubeconfig/k3s.yaml
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack `
-  --namespace monitoring --create-namespace `
-  --set grafana.enabled=false `
-  --set alertmanager.enabled=false
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring --create-namespace --version 92.3.0 -f Practica10/deploy/observability/grafana-values.yaml --wait
+kubectl apply -k Practica10/deploy/observability   # ServiceMonitor, dashboards, Ingress + TLS
 ```
 
-Incluye Prometheus, `node-exporter`, `kube-state-metrics` y el operador.
-*(El stack ya está instalado así en el clúster.)*
+El sidecar de Grafana importa automáticamente todo ConfigMap con la etiqueta
+`grafana_dashboard: "1"` del namespace `monitoring`.
 
-> **Para la parte de Grafana:** actualizar con
-> `helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring --set grafana.enabled=true --set grafana.adminPassword="admin"`
-> y aplicar `kubectl apply -k .\Practica10\deploy\observability` para importar
-> los 2 dashboards (etiqueta `grafana_dashboard: "1"`) y el Ingress público
-> `grafana.academix.<IP>.sslip.io`.
-
-## 2. Aplicar el ServiceMonitor (ya hecho)
-
-```powershell
-kubectl apply -k .\Practica10\deploy\observability
-```
-
-Solo aplica `rabbitmq-servicemonitor.yaml` ahora; los `grafana-dashboard-*.yaml`,
-`grafana-ingress.yaml` y `grafana-middleware.yaml` se aplican en la parte de
-Grafana (son seguros, pero sin Grafana no producen efecto). El Service
-`rabbitmq` debe tener la label `app.kubernetes.io/name: rabbitmq` (ya añadida
-en `deploy/kubernetes/data.yaml`) para que el ServiceMonitor lo seleccione.
+> **Nota sobre las métricas de colas:** `rabbitmq_prometheus` expone por defecto las
+> métricas **agregadas** (sin la etiqueta `queue`). Por eso los paneles usan
+> `sum(rabbitmq_queue_messages)` en lugar de filtrar por cola: el filtro
+> `{queue="..."}` devolvía series vacías.
 
 ## 3. Verificar
 
@@ -69,10 +62,10 @@ Métricas relevantes del broker (RabbitMQ 3.13, plugin `rabbitmq_prometheus`):
 
 | Métrica | Qué mide |
 |---|---|
-| `rabbitmq_queue_messages{queue="academix.reservas.solicitudes"}` | Longitud de la cola de solicitudes |
+| `sum(rabbitmq_queue_messages)` | Mensajes encolados (agregado de todas las colas) |
 | `rate(rabbitmq_channel_messages_published_total[1m])` | Tasa de publicación (tickets emitidos/s) |
 | `rate(rabbitmq_channel_messages_acked_total[1m])` | Tasa de consumo de los workers |
-| `rabbitmq_queue_messages_unacked` | Mensajes sin acuse (backlog en consumidores) |
+| `sum(rabbitmq_queue_messages_unacked)` | Mensajes sin acuse (backlog en consumidores) |
 
 ## 4. Cuándo se actualiza el host
 

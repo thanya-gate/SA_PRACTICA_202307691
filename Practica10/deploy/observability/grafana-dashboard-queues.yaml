@@ -17,23 +17,23 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "Longitud de cola (solicitudes)",
+          "title": "Longitud de cola (mensajes encolados)",
           "type": "timeseries",
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
           "targets": [
-            {"expr": "rabbitmq_queue_messages{queue=\"academix.reservas.solicitudes\"}", "legendFormat": "{{queue}}"}
+            {"expr": "sum(rabbitmq_queue_messages)", "legendFormat": "mensajes en cola"}
           ]
         },
         {
           "id": 2,
-          "title": "Mensajes listos y sin acuse (solicitudes)",
+          "title": "Mensajes listos y sin acuse",
           "type": "timeseries",
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
           "targets": [
-            {"expr": "rabbitmq_queue_messages_ready{queue=\"academix.reservas.solicitudes\"}", "legendFormat": "listos"},
-            {"expr": "rabbitmq_queue_messages_unacked{queue=\"academix.reservas.solicitudes\"}", "legendFormat": "sin acuse"}
+            {"expr": "sum(rabbitmq_queue_messages_ready)", "legendFormat": "listos"},
+            {"expr": "sum(rabbitmq_queue_messages_unacked)", "legendFormat": "sin acuse"}
           ]
         },
         {
@@ -58,12 +58,12 @@ data:
         },
         {
           "id": 5,
-          "title": "Tickets emitidos (acumulado)",
+          "title": "Tickets procesados (rango visible)",
           "type": "stat",
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
           "targets": [
-            {"expr": "sum(rabbitmq_channel_messages_published_total)", "legendFormat": "publicados totales"}
+            {"expr": "round(sum(increase(rabbitmq_channel_messages_acked_total[$__range])))", "legendFormat": "procesados"}
           ],
           "fieldConfig": {
             "defaults": {
