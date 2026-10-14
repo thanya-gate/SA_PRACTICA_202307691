@@ -1,0 +1,399 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogo-service
+  labels:
+    app.kubernetes.io/name: catalogo-service
+    app.kubernetes.io/part-of: academix
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: catalogo-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: grpc
+      port: 50061
+      targetPort: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogo-service
+  labels:
+    app.kubernetes.io/name: catalogo-service
+    app.kubernetes.io/part-of: academix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalogo-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: catalogo-service
+        app.kubernetes.io/part-of: academix
+    spec:
+      containers:
+        - name: catalogo-service
+          image: ghcr.io/thanya-gate/academix/catalogo-service
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 50061
+          envFrom:
+            - configMapRef:
+                name: academix-config-comun
+          env:
+            - name: CATALOGO_VERSION
+              value: "3.0.0"
+            - name: CATALOGO_HTTP_PUERTO
+              value: "8080"
+            - name: CATALOGO_GRPC_PUERTO
+              value: "50061"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-password
+            - name: CATALOGO_PG_DSN
+              value: postgresql://$(DB_USER):$(DB_PASSWORD)@postgres-catalogo:5432/academix_catalogo
+            - name: CATALOGO_PG_MAX_CONEXIONES
+              value: "10"
+            - name: CATALOGO_REDIS_URL
+              value: redis://redis:6379/1
+            - name: CATALOGO_TTL_LISTADO_SEG
+              value: "15"
+            - name: CATALOGO_TTL_DETALLE_SEG
+              value: "30"
+            - name: CATALOGO_PROTO_DIR
+              value: /app/proto
+          readinessProbe:
+            httpGet:
+              path: /api/talleres/salud
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 4
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 35
+            periodSeconds: 20
+            timeoutSeconds: 4
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: certificados-service
+  labels:
+    app.kubernetes.io/name: certificados-service
+    app.kubernetes.io/part-of: academix
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: certificados-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: grpc
+      port: 50063
+      targetPort: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: certificados-service
+  labels:
+    app.kubernetes.io/name: certificados-service
+    app.kubernetes.io/part-of: academix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: certificados-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: certificados-service
+        app.kubernetes.io/part-of: academix
+    spec:
+      containers:
+        - name: certificados-service
+          image: ghcr.io/thanya-gate/academix/certificados-service
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 50063
+          envFrom:
+            - configMapRef:
+                name: academix-config-comun
+          env:
+            - name: CERTIFICADOS_VERSION
+              value: "3.0.0"
+            - name: CERTIFICADOS_HTTP_PUERTO
+              value: "8080"
+            - name: CERTIFICADOS_GRPC_PUERTO
+              value: "50063"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-password
+            - name: CERTIFICADOS_PG_DSN
+              value: postgresql://$(DB_USER):$(DB_PASSWORD)@postgres-credenciales:5432/academix_credenciales
+            - name: CERTIFICADOS_PG_MAX_CONEXIONES
+              value: "5"
+            - name: CERTIFICADOS_CLAVE_FIRMA
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: signing-key
+            - name: CERTIFICADOS_PROTO_DIR
+              value: /app/proto
+          readinessProbe:
+            httpGet:
+              path: /api/certificados/salud
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 4
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 35
+            periodSeconds: 20
+            timeoutSeconds: 4
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reservas-service
+  labels:
+    app.kubernetes.io/name: reservas-service
+    app.kubernetes.io/part-of: academix
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: reservas-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: grpc
+      port: 50060
+      targetPort: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservas-service
+  labels:
+    app.kubernetes.io/name: reservas-service
+    app.kubernetes.io/part-of: academix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reservas-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reservas-service
+        app.kubernetes.io/part-of: academix
+    spec:
+      containers:
+        - name: reservas-service
+          image: ghcr.io/thanya-gate/academix/reservas-service
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 50060
+          envFrom:
+            - configMapRef:
+                name: academix-config-comun
+          env:
+            - name: VERSION_SERVICIO
+              value: "3.0.0"
+            - name: PUERTO_HTTP
+              value: "8080"
+            - name: PUERTO_GRPC
+              value: "50060"
+            - name: BROKER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: broker-username
+            - name: BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: broker-password
+            - name: BROKER_URL
+              value: amqp://$(BROKER_USER):$(BROKER_PASSWORD)@rabbitmq:5672/%2F
+            - name: BROKER_EXCHANGE
+              value: academix.reservas
+            - name: BROKER_COLA
+              value: academix.reservas.solicitudes
+            - name: BROKER_ROUTING_KEY
+              value: reserva.solicitada
+            - name: BROKER_EXCHANGE_MUERTOS
+              value: academix.reservas.dlx
+            - name: BROKER_COLA_MUERTOS
+              value: academix.reservas.dlq
+            - name: BROKER_ROUTING_KEY_MUERTOS
+              value: reserva.descartada
+            - name: BROKER_REINTENTOS
+              value: "3"
+            - name: BROKER_ESPERA_MS
+              value: "250"
+            - name: REDIS_ADDR
+              value: redis:6379
+            - name: REDIS_TTL_SEGUNDOS
+              value: "86400"
+          readinessProbe:
+            httpGet:
+              path: /api/salud
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 4
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 4
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-worker
+  labels:
+    app.kubernetes.io/name: reservation-worker
+    app.kubernetes.io/part-of: academix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reservation-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reservation-worker
+        app.kubernetes.io/part-of: academix
+    spec:
+      containers:
+        - name: reservation-worker
+          image: ghcr.io/thanya-gate/academix/reservation-worker
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: academix-config-comun
+          env:
+            - name: LOG_LEVEL
+              value: INFO
+            - name: BROKER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: broker-username
+            - name: BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: broker-password
+            - name: BROKER_URL
+              value: amqp://$(BROKER_USER):$(BROKER_PASSWORD)@rabbitmq:5672/%2F
+            - name: BROKER_EXCHANGE
+              value: academix.reservas
+            - name: BROKER_COLA
+              value: academix.reservas.solicitudes
+            - name: BROKER_ROUTING_KEY
+              value: reserva.solicitada
+            - name: BROKER_EXCHANGE_MUERTOS
+              value: academix.reservas.dlx
+            - name: BROKER_COLA_MUERTOS
+              value: academix.reservas.dlq
+            - name: BROKER_ROUTING_KEY_MUERTOS
+              value: reserva.descartada
+            - name: BROKER_EXCHANGE_RESULTADOS
+              value: academix.reservas.resultados
+            - name: BROKER_ROUTING_KEY_RESULTADOS
+              value: reserva.resultada
+            - name: BROKER_PREFETCH
+              value: "20"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: db-password
+            - name: DATABASE_URL
+              value: postgresql://$(DB_USER):$(DB_PASSWORD)@postgres-reservas:5432/academix_reservas
+            - name: REDIS_URL
+              value: redis://redis:6379/0
+            - name: REDIS_TTL_SEGUNDOS
+              value: "86400"
+            - name: CATALOGO_GRPC_ADDR
+              value: catalogo-service:50061
+            - name: CERTIFICADOS_GRPC_ADDR
+              value: certificados-service:50063
+            - name: CLAVE_FIRMA_PASE
+              valueFrom:
+                secretKeyRef:
+                  name: academix-secrets
+                  key: signing-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

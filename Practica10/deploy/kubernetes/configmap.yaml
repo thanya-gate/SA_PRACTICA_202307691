@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: academix-config-comun
+  labels:
+    app.kubernetes.io/part-of: academix
+data:
+  # Zona horaria y modo de ejecución para todos los servicios.
+  TZ: America/Guatemala
+  NODE_ENV: production
+  # Origen del frontend autorizado por CORS. Si el frontend cambia de URL,
+  # este es el único lugar que hay que tocar (además de recompilar Vercel).
+  CORS_ORIGENES: https://sa-practica7.vercel.app
+  CATALOGO_ORIGENES_PERMITIDOS: https://sa-practica7.vercel.app
+  CERTIFICADOS_ORIGENES_PERMITIDOS: https://sa-practica7.vercel.app

@@ -1,0 +1,73 @@
+# Academix · Observabilidad (Prometheus + Grafana sobre K3s)
+
+Monitoreo y dashboards para la Práctica 10. Cubre la sección de
+**Observabilidad** del documento: Prometheus scrapea métricas de RabbitMQ
+(plugin `rabbitmq_prometheus`) y de Kubernetes, y Grafana muestra dos
+dashboards:
+
+| Dashboard | Qué mide |
+|---|---|
+| Academix · Infraestructura | CPU/memoria de pods, nodos listos, pods por fase, tráfico de red |
+| Academix · Negocio y Colas | Longitud de cola de solicitudes, tasas de publicación/consumo, tickets emitidos (acumulado) |
+
+**Estado: desplegado y verificado.**
+
+- Grafana público (solo lectura, sin login): <https://grafana.academix.34.29.246.70.sslip.io>
+- Los 12 paneles de los 2 dashboards devuelven datos (comprobado con `/api/ds/query`).
+
+## 1. Crear la contraseña de admin (una sola vez)
+
+La contraseña no se versiona: vive en un Secret que el chart lee con `admin.existingSecret`.
+
+```bash
+kubectl create secret generic grafana-admin -n monitoring \
+  --from-literal=admin-user=admin --from-literal=admin-password="$(openssl rand -base64 18)"
+# Para leerla: kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
+```
+
+## 2. Instalar / actualizar el stack
+
+Todos los valores están en `grafana-values.yaml` (Grafana habilitado, acceso anónimo
+Viewer, datasource con `uid: prometheus`, sidecar de dashboards, Alertmanager deshabilitado).
+
+```bash
+export KUBECONFIG=Practica9/infra/ansible/kubeconfig/k3s.yaml
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring --create-namespace --version 92.3.0 -f Practica10/deploy/observability/grafana-values.yaml --wait
+kubectl apply -k Practica10/deploy/observability   # ServiceMonitor, dashboards, Ingress + TLS
+```
+
+El sidecar de Grafana importa automáticamente todo ConfigMap con la etiqueta
+`grafana_dashboard: "1"` del namespace `monitoring`.
+
+> **Nota sobre las métricas de colas:** `rabbitmq_prometheus` expone por defecto las
+> métricas **agregadas** (sin la etiqueta `queue`). Por eso los paneles usan
+> `sum(rabbitmq_queue_messages)` en lugar de filtrar por cola: el filtro
+> `{queue="..."}` devolvía series vacías.
+
+## 3. Verificar
+
+```powershell
+kubectl get servicemonitors -n monitoring
+# Targets esperados en Prometheus (Status → Targets):
+#   rabbitmq           up   (métricas del broker, :15692/metrics)
+#   node-exporter      up   (recursos del nodo K3s)
+#   kube-state-metrics up   (estado de pods/nodos)
+kubectl port-forward svc/kube-prometheus-stack-prometheus -n monitoring 9090:9090
+# → http://localhost:9090
+```
+
+Métricas relevantes del broker (RabbitMQ 3.13, plugin `rabbitmq_prometheus`):
+
+| Métrica | Qué mide |
+|---|---|
+| `sum(rabbitmq_queue_messages)` | Mensajes encolados (agregado de todas las colas) |
+| `rate(rabbitmq_channel_messages_published_total[1m])` | Tasa de publicación (tickets emitidos/s) |
+| `rate(rabbitmq_channel_messages_acked_total[1m])` | Tasa de consumo de los workers |
+| `sum(rabbitmq_queue_messages_unacked)` | Mensajes sin acuse (backlog en consumidores) |
+
+## 4. Cuándo se actualiza el host
+
+Si se recrea la VM y cambia la IP pública, actualizar `grafana.academix.<IP>.sslip.io`
+en `grafana-ingress.yaml` (host, `dnsNames` y regla) y en los accesos del README.

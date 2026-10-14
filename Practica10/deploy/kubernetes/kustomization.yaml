@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: academix-prod
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - data.yaml
+  - workloads.yaml
+  - ingress.yaml
+  - traefik-middlewares.yaml
+# Etiqueta de las imágenes publicadas en el Container Registry (GHCR).
+# Se cambia aquí en un solo lugar; los Deployments referencian la imagen
+# sin tag y Kustomize le inyecta el newTag al construir.
+images:
+  - name: ghcr.io/thanya-gate/academix/catalogo-service
+    newTag: "3.0.0"
+  - name: ghcr.io/thanya-gate/academix/certificados-service
+    newTag: "3.0.0"
+  - name: ghcr.io/thanya-gate/academix/reservas-service
+    newTag: "3.0.0"
+  - name: ghcr.io/thanya-gate/academix/reservation-worker
+    newTag: "3.0.0"
