@@ -14,7 +14,7 @@
 set -euo pipefail
 
 ZONA="${ZONA:-us-central1-a}"
-TAG="${TAG:-3.0.0}"
+TAG="${TAG:-4.0.0}"
 CERT_MANAGER="v1.21.2"
 CHART_VERSION="92.3.0"
 # IPs con las que están escritos los manifiestos versionados.

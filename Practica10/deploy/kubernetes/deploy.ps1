@@ -8,7 +8,7 @@
   su rolling update. Los pods descargan las imágenes desde GHCR.
 
 .PARAMETER Tag
-  Etiqueta de las imágenes en GHCR. Valor por defecto: 3.0.0.
+  Etiqueta de las imágenes en GHCR. Valor por defecto: 4.0.0.
   Al cierre de la práctica se usa 4.0.0 (tras publicar el tag V4.0.0 en GitHub).
 
 .PARAMETER Kustomization
@@ -19,7 +19,7 @@
   .\deploy.ps1 -Tag 4.0.0
 #>
 param(
-    [string]$Tag = "3.0.0",
+    [string]$Tag = "4.0.0",
     [string]$Kustomization = (Join-Path $PSScriptRoot "kustomization.yaml"),
     [string]$Namespace = "academix-prod"
 )
