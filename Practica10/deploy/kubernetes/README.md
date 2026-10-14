@@ -10,10 +10,10 @@ El cambio central respecto a la Práctica 9 es el mecanismo de obtención de im�
 
 | Componente | Tipo de recurso | Imagen |
 |---|---|---|
-| `catalogo-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/catalogo-service:4.0.0` |
-| `reservas-service` (ticketing) | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/reservas-service:4.0.0` |
-| `certificados-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/certificados-service:4.0.0` |
-| `reservation-worker` | Deployment | `ghcr.io/thanya-gate/academix/reservation-worker:4.0.0` |
+| `catalogo-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/catalogo-service:3.0.0` |
+| `reservas-service` (ticketing) | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/reservas-service:3.0.0` |
+| `certificados-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/certificados-service:3.0.0` |
+| `reservation-worker` | Deployment | `ghcr.io/thanya-gate/academix/reservation-worker:3.0.0` |
 | `rabbitmq` (broker) | StatefulSet + Service headless | `rabbitmq:3.13-management-alpine` |
 | `redis` (caché) | StatefulSet + ClusterIP | `redis:7-alpine` |
 | `postgres-{catalogo,reservas,credenciales}` | StatefulSet + ClusterIP | `postgres:16-alpine` |
@@ -44,7 +44,7 @@ Practica10/deploy/kubernetes/
   (`ghcr.io/thanya-gate/academix/<servicio>:<tag>`). Los paquetes son **públicos**,
   así que K3s las descarga sin credenciales adicionales.
 
-> **Nota sobre el tag:** durante el desarrollo se usa la imagen **`3.0.0`** (ya publicada en GHCR). Al cierre de la práctica se creará el tag final `V4.0.0`; el CI publicará las imágenes `4.0.0` y basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar) para dejarlo como versión de entrega.
+> **Nota sobre el tag:** se despliega la imagen **`3.0.0`** (publicada en GHCR). El tag Git de entrega (`V3.0.0` ya existe de una práctica anterior) lo define el equipo; si se publica otra versión, basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar).
 
 ## Procedimiento
 
@@ -82,7 +82,7 @@ Todo se ejecuta desde la raíz del repositorio en PowerShell.
      --from-file=03-credenciales.sql=Practica7/Backend/sql/03-credenciales.sql
    ```
 
-4. **Aplicar el despliegue** (Kustomize inyecta el tag `4.0.0`):
+4. **Aplicar el despliegue** (Kustomize inyecta el tag de `kustomization.yaml` (hoy `3.0.0`)):
 
    ```powershell
    kubectl apply -k Practica10/deploy/kubernetes
@@ -90,7 +90,7 @@ Todo se ejecuta desde la raíz del repositorio en PowerShell.
    kubectl get pods,services,ingress -n academix-prod
    ```
 
-5. **Verificar que las imágenes vinieron del registry.** Ningún pod debe quedar en `ErrImagePull`/`ImagePullBackOff` y la columna `IMAGE` debe mostrar el tag `4.0.0`:
+5. **Verificar que las imágenes vinieron del registry.** Ningún pod debe quedar en `ErrImagePull`/`ImagePullBackOff` y la columna `IMAGE` debe mostrar el tag configurado:
 
    ```powershell
    kubectl get pods -n academix-prod -o custom-columns="POD:.metadata.name,IMAGE:.spec.containers[*].image,STATUS:.status.phase"
