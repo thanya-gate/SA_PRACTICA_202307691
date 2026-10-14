@@ -170,6 +170,24 @@ cd Practica9/infra/terraform && terraform apply
 cd ../ansible && ansible-playbook site.yml
 ```
 
+### Reconstrucción completa en un comando
+
+Si las VMs se recrean (`terraform destroy` + `apply` y `ansible-playbook site.yml` de la P9),
+toda la Práctica 10 se vuelve a montar con:
+
+```bash
+Practica10/deploy/rebuild.sh            # TAG=4.0.0 Practica10/deploy/rebuild.sh para otra versión
+```
+
+El script es idempotente y tarda unos 2 minutos sobre un entorno existente:
+1. Lee las IPs públicas actuales con gcloud y las sustituye en una copia temporal de los manifiestos.
+2. Instala cert-manager y el ClusterIssuer.
+3. Crea los Secrets si no existen (con credenciales aleatorias) y los ConfigMaps de SQL.
+4. Aplica las apps en K3s, instala Prometheus y Grafana con Helm y despliega el entorno Dev.
+5. Verifica los 7 endpoints públicos.
+
+Si las IPs cambiaron, al final avisa de qué hay que actualizar (la URL de la API en Vercel).
+
 ## 9. Conclusiones
 
 - La plataforma corre en K3s con Deployments acotados en recursos, Services internos,

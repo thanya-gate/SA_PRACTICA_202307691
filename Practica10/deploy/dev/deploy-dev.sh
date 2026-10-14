@@ -16,7 +16,9 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/Backend/sql"
 cp "$RAIZ/Practica7/docker-compose.yml" "$TMP/"
 cp "$RAIZ/Practica7/Backend/sql/"0*.sql "$TMP/Backend/sql/"
-cp "$RAIZ/Practica10/deploy/dev/Caddyfile.dev" "$TMP/Caddyfile"
+# La IP es efímera: se toma de gcloud (o de DEV_IP) y se escribe en el host de Caddy.
+DEV_IP="${DEV_IP:-$(gcloud compute instances describe "$VM" --zone "$ZONA" --format='value(networkInterfaces[0].accessConfigs[0].natIP)')}"
+sed "s/35\.238\.184\.140/$DEV_IP/g" "$RAIZ/Practica10/deploy/dev/Caddyfile.dev" > "$TMP/Caddyfile"
 cp "$RAIZ/Practica10/deploy/dev/.env.example" "$TMP/env.example"
 
 echo "==> Copiando paquete a $VM:$DESTINO"
