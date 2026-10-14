@@ -1,0 +1,20 @@
+# Gateway HTTPS del entorno Dev (vm-development). Caddy corre con red host y
+# reenvía a los puertos que docker compose liga solo a 127.0.0.1.
+# El puerto 80 está libre en esta VM, así que el reto ACME HTTP funciona normal.
+35.238.184.140.sslip.io {
+	encode zstd gzip
+
+	handle_path /catalogo/* {
+		reverse_proxy 127.0.0.1:18081
+	}
+
+	handle_path /reservas/* {
+		reverse_proxy 127.0.0.1:18080
+	}
+
+	handle_path /certificados/* {
+		reverse_proxy 127.0.0.1:18082
+	}
+
+	respond "Academix Pass · entorno DEV" 200
+}
