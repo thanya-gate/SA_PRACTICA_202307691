@@ -65,7 +65,7 @@ Manifiestos en [`deploy/kubernetes/`](deploy/kubernetes/README.md), orquestados 
 | Services `ClusterIP` | Comunicación interna HTTP y gRPC entre servicios y el broker. |
 | Ingress | Traefik con TLS de Let's Encrypt (cert-manager); rutas `/catalogo`, `/reservas` y `/certificados` con *strip-prefix* y redirección a HTTPS. |
 | ConfigMaps y Secrets | `academix-config-comun` (TZ, CORS) y `academix-secrets` (credenciales, creado fuera de git). |
-| Container Registry | Imágenes `ghcr.io/thanya-gate/academix/*:3.0.0` con `imagePullPolicy: Always`. En K3s no se ejecuta `docker build`. |
+| Container Registry | Imágenes `ghcr.io/thanya-gate/academix/*:4.0.0` con `imagePullPolicy: Always`. En K3s no se ejecuta `docker build`. |
 
 ```bash
 export KUBECONFIG=Practica9/infra/ansible/kubeconfig/k3s.yaml
@@ -98,14 +98,14 @@ y el sidecar de Grafana los importa solo.
 | VM | `vm-development` (e2-micro) | `vm-production-k3s` (e2-medium) |
 | Orquestación | Docker Compose | K3s |
 | Exposición | Caddy (80/443) con TLS automático | Ingress Traefik + cert-manager |
-| Imágenes | GHCR `:3.0.0` (`docker compose pull`) | GHCR `:3.0.0` (`imagePullPolicy: Always`) |
+| Imágenes | GHCR `:4.0.0` (`docker compose pull`) | GHCR `:4.0.0` (`imagePullPolicy: Always`) |
 | Puertos internos | Ligados a `127.0.0.1`; solo Caddy es público | `ClusterIP` |
 
 El entorno Dev reutiliza el entregable `Practica7/docker-compose.yml`, que no tiene
 `build:`. Se despliega con:
 
 ```bash
-Practica10/deploy/dev/deploy-dev.sh          # tag por defecto 3.0.0
+Practica10/deploy/dev/deploy-dev.sh          # tag por defecto 4.0.0
 ```
 
 El script copia el compose, los SQL de inicialización y `Caddyfile.dev` a

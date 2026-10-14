@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Despliega el entorno Dev en vm-development con Docker Compose.
 # Solo copia archivos y descarga imágenes de GHCR: en la VM no hay docker build.
-# Uso: ./deploy-dev.sh [tag]   (por defecto 3.0.0)
+# Uso: ./deploy-dev.sh [tag]   (por defecto 4.0.0)
 set -euo pipefail
 
-TAG="${1:-3.0.0}"
+TAG="${1:-4.0.0}"
 VM="${VM:-vm-development}"
 ZONA="${ZONA:-us-central1-a}"
 DESTINO=/opt/academix-dev
