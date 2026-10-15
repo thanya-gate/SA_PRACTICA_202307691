@@ -80,7 +80,7 @@ Detalle e instalación en [`deploy/observability/`](deploy/observability/README.
   - `kubelet`/cAdvisor: CPU, memoria y red de cada pod.
   - `kube-state-metrics`: fase de los pods y estado de los nodos.
   - `node-exporter`: recursos del nodo.
-  - **RabbitMQ**, mediante el plugin `rabbitmq_prometheus` y el `ServiceMonitor academix-rabbitmq`: mensajes encolados y tasas de publicación y consumo.
+  - **RabbitMQ**, mediante el plugin `rabbitmq_prometheus` y el `ServiceMonitor academix-rabbitmq`: mensajes encolados y tasas de publicación y consumo
 - **Grafana** se expone por Ingress con TLS y **acceso anónimo de solo lectura**. La contraseña de admin está en un Secret, no en git.
 
 | Tablero | Paneles |
