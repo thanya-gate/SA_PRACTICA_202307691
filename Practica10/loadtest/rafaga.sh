@@ -8,7 +8,7 @@
 #   ./rafaga.sh https://35.238.184.140.sslip.io 200 20  # Dev
 set -euo pipefail
 
-BASE="${1:-https://academix.34.29.246.70.sslip.io}"
+BASE="${1:-https://academix.34.123.206.113.sslip.io}"
 TOTAL="${2:-500}"
 CONC="${3:-50}"
 

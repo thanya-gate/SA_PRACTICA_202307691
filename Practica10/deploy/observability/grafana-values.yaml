@@ -14,7 +14,7 @@ grafana:
   # Acceso público de solo lectura a los tableros (requisito del enunciado).
   grafana.ini:
     server:
-      root_url: https://grafana.academix.34.29.246.70.sslip.io
+      root_url: https://grafana.academix.34.123.206.113.sslip.io
     auth.anonymous:
       enabled: true
       org_role: Viewer

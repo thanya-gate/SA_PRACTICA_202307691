@@ -2,17 +2,21 @@
 
 Monitoreo y dashboards para la Práctica 10. Cubre la sección de
 **Observabilidad** del documento: Prometheus scrapea métricas de RabbitMQ
-(plugin `rabbitmq_prometheus`) y de Kubernetes, y Grafana muestra dos
-dashboards:
+(plugin `rabbitmq_prometheus`), de Traefik (Ingress) y de Kubernetes, y Grafana
+muestra tres dashboards:
 
 | Dashboard | Qué mide |
 |---|---|
 | Academix · Infraestructura | CPU/memoria de pods, nodos listos, pods por fase, tráfico de red |
 | Academix · Negocio y Colas | Longitud de cola de solicitudes, tasas de publicación/consumo, tickets emitidos (acumulado) |
+| Academix · Ingress y Experiencia de Usuario (extra) | Peticiones/s por servicio, latencia p95/p99, códigos HTTP, % de 5xx, disponibilidad vs. SLO 99%, reinicios de contenedores |
+
+El tercer tablero demuestra el punto 4 del enunciado: durante la ráfaga la cola sube
+(tablero 2) mientras la latencia y los errores del Ingress se mantienen estables.
 
 **Estado: desplegado y verificado.**
 
-- Grafana público (solo lectura, sin login): <https://grafana.academix.34.29.246.70.sslip.io>
+- Grafana público (solo lectura, sin login): <https://grafana.academix.34.123.206.113.sslip.io>
 - Los 12 paneles de los 2 dashboards devuelven datos (comprobado con `/api/ds/query`).
 
 ## 1. Crear la contraseña de admin (una sola vez)
@@ -54,6 +58,7 @@ kubectl get servicemonitors -n monitoring
 #   rabbitmq           up   (métricas del broker, :15692/metrics)
 #   node-exporter      up   (recursos del nodo K3s)
 #   kube-state-metrics up   (estado de pods/nodos)
+#   traefik            up   (PodMonitor, :9100/metrics del pod de Traefik en kube-system)
 kubectl port-forward svc/kube-prometheus-stack-prometheus -n monitoring 9090:9090
 # → http://localhost:9090
 ```
