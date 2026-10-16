@@ -18,7 +18,7 @@ TAG="${TAG:-4.0.0}"
 CERT_MANAGER="v1.21.2"
 CHART_VERSION="92.3.0"
 # IPs con las que están escritos los manifiestos versionados.
-IP_PROD_REPO="34.29.246.70"
+IP_PROD_REPO="34.123.206.113"
 IP_DEV_REPO="35.238.184.140"
 
 AQUI="$(cd "$(dirname "$0")" && pwd)"

@@ -14,9 +14,9 @@ Las rutas públicas actuales son:
 
 | Servicio | URL base | Salud |
 |---|---|---|
-| Catálogo | `https://academix.34.29.246.70.sslip.io/catalogo` | `/api/talleres/salud` |
-| Reservas | `https://academix.34.29.246.70.sslip.io/reservas` | `/api/salud` |
-| Certificados | `https://academix.34.29.246.70.sslip.io/certificados` | `/api/certificados/salud` |
+| Catálogo | `https://academix.34.123.206.113.sslip.io/catalogo` | `/api/talleres/salud` |
+| Reservas | `https://academix.34.123.206.113.sslip.io/reservas` | `/api/salud` |
+| Certificados | `https://academix.34.123.206.113.sslip.io/certificados` | `/api/certificados/salud` |
 
 ## Preparación y despliegue
 
@@ -96,9 +96,9 @@ Si el archivo aún no existe, ejecuta primero `ansible-playbook -i inventory.ini
 En el proyecto `sa-practica7`, agrega estas variables para el entorno **Production** y luego crea un nuevo deployment de producción:
 
 ```text
-NEXT_PUBLIC_API_CATALOGO_BASE=https://academix.34.29.246.70.sslip.io/catalogo
-NEXT_PUBLIC_API_RESERVAS_BASE=https://academix.34.29.246.70.sslip.io/reservas
-NEXT_PUBLIC_API_CERTIFICADOS_BASE=https://academix.34.29.246.70.sslip.io/certificados
+NEXT_PUBLIC_API_CATALOGO_BASE=https://academix.34.123.206.113.sslip.io/catalogo
+NEXT_PUBLIC_API_RESERVAS_BASE=https://academix.34.123.206.113.sslip.io/reservas
+NEXT_PUBLIC_API_CERTIFICADOS_BASE=https://academix.34.123.206.113.sslip.io/certificados
 ```
 
 Next.js incorpora las variables `NEXT_PUBLIC_*` al compilar el frontend; guardar las variables sin redeplegar no actualiza una versión ya construida. Las APIs limitan CORS a `https://sa-practica7.vercel.app`.
@@ -106,9 +106,9 @@ Next.js incorpora las variables `NEXT_PUBLIC_*` al compilar el frontend; guardar
 ## Verificación
 
 ```powershell
-curl.exe -i https://academix.34.29.246.70.sslip.io/catalogo/api/talleres/salud
-curl.exe -i https://academix.34.29.246.70.sslip.io/reservas/api/salud
-curl.exe -i https://academix.34.29.246.70.sslip.io/certificados/api/certificados/salud
+curl.exe -i https://academix.34.123.206.113.sslip.io/catalogo/api/talleres/salud
+curl.exe -i https://academix.34.123.206.113.sslip.io/reservas/api/salud
+curl.exe -i https://academix.34.123.206.113.sslip.io/certificados/api/certificados/salud
 kubectl exec -n academix-prod rabbitmq-0 -- rabbitmqctl list_queues name messages consumers
 ```
 

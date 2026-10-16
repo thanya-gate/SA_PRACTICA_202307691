@@ -12,7 +12,7 @@ dashboards:
 
 **Estado: desplegado y verificado.**
 
-- Grafana público (solo lectura, sin login): <https://grafana.academix.34.29.246.70.sslip.io>
+- Grafana público (solo lectura, sin login): <https://grafana.academix.34.123.206.113.sslip.io>
 - Los 12 paneles de los 2 dashboards devuelven datos (comprobado con `/api/ds/query`).
 
 ## 1. Crear la contraseña de admin (una sola vez)
