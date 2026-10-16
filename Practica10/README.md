@@ -18,8 +18,8 @@
 
 | Entorno | URL |
 |---|---|
-| **Prod** (K3s, Ingress) | `https://academix.34.29.246.70.sslip.io/{catalogo,reservas,certificados}/...` |
-| **Grafana** (público, solo lectura) | <https://grafana.academix.34.29.246.70.sslip.io> |
+| **Prod** (K3s, Ingress) | `https://academix.34.123.206.113.sslip.io/{catalogo,reservas,certificados}/...` |
+| **Grafana** (público, solo lectura) | <https://grafana.academix.34.123.206.113.sslip.io> |
 | **Dev** (VM + Docker Compose) | `https://35.238.184.140.sslip.io/{catalogo,reservas,certificados}/...` |
 | Frontend | <https://sa-practica7.vercel.app> |
 

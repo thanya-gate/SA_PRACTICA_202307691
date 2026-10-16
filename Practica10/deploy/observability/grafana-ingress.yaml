@@ -8,7 +8,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - grafana.academix.34.29.246.70.sslip.io
+    - grafana.academix.34.123.206.113.sslip.io
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -20,10 +20,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - grafana.academix.34.29.246.70.sslip.io
+        - grafana.academix.34.123.206.113.sslip.io
       secretName: academix-grafana-tls
   rules:
-    - host: grafana.academix.34.29.246.70.sslip.io
+    - host: grafana.academix.34.123.206.113.sslip.io
       http:
         paths:
           - path: /

@@ -170,7 +170,7 @@ Se revisaron las dos VMs y se desplegó la aplicación en `vm-production-k3s`, d
 | `vm-production-k3s` | `RUNNING`; servicio K3s activo, versión v1.33.5+k3s1. |
 | Nodo K3s | `vm-production-k3s` aparece `Ready`. |
 | Aplicación | 9 pods `Running` y `Ready`: tres APIs, worker, RabbitMQ, Redis y tres PostgreSQL. |
-| APIs públicas | Catálogo, reservas y certificados responden `HTTP 200` por HTTPS en `academix.34.29.246.70.sslip.io`; certificado TLS emitido por Let's Encrypt mediante cert-manager. |
+| APIs públicas | Catálogo, reservas y certificados responden `HTTP 200` por HTTPS en `academix.34.123.206.113.sslip.io`; certificado TLS emitido por Let's Encrypt mediante cert-manager. |
 | Frontend de Vercel | Se confirmó por preflight CORS que las tres APIs permiten el origen `https://sa-practica7.vercel.app`. Para que el frontend use producción, falta guardar sus tres variables `NEXT_PUBLIC_API_*` en el entorno Production de Vercel y redeplegar. |
 | Mensajería | RabbitMQ muestra la cola `academix.reservas.solicitudes` con 1 consumidor y 0 mensajes pendientes; la cola de mensajes muertos está vacía. |
 | Reglas de red | Las reglas esperadas están presentes. SSH (22) y API K3s (6443) aceptan origen `0.0.0.0/0`; los puertos internos de K3s quedan limitados a la VPC `10.10.0.0/16`. |
