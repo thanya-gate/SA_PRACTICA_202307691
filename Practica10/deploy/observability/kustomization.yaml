@@ -3,7 +3,9 @@ kind: Kustomization
 namespace: monitoring
 resources:
   - rabbitmq-servicemonitor.yaml
+  - traefik-podmonitor.yaml
   - grafana-dashboard-infra.yaml
   - grafana-dashboard-queues.yaml
+  - grafana-dashboard-ingress.yaml
   - grafana-ingress.yaml
   - grafana-middleware.yaml
