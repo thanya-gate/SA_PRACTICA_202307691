@@ -11,7 +11,7 @@ data:
       "title": "Academix · Ingress y Experiencia de Usuario",
       "tags": ["academix"],
       "schemaVersion": 39,
-      "version": 1,
+      "version": 2,
       "timezone": "america/guatemala",
       "refresh": "10s",
       "time": {"from": "now-15m", "to": "now"},
@@ -33,10 +33,10 @@ data:
           "type": "timeseries",
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+          "fieldConfig": {"defaults": {"unit": "s", "custom": {"spanNulls": true, "showPoints": "always"}}, "overrides": []},
           "targets": [
-            {"expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"academix-prod-.*\"}[1m])) by (le, service))", "legendFormat": "p95 {{service}}"},
-            {"expr": "histogram_quantile(0.99, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"academix-prod-.*\"}[1m])) by (le))", "legendFormat": "p99 global"}
+            {"expr": "histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"academix-prod-.*\"}[2m])) by (le, service))", "legendFormat": "p95 {{service}}"},
+            {"expr": "histogram_quantile(0.99, sum(rate(traefik_service_request_duration_seconds_bucket{service=~\"academix-prod-.*\"}[2m])) by (le))", "legendFormat": "p99 global"}
           ]
         },
         {
@@ -45,7 +45,7 @@ data:
           "type": "timeseries",
           "datasource": {"type": "prometheus", "uid": "prometheus"},
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "fieldConfig": {"defaults": {"unit": "reqps", "custom": {"stacking": {"mode": "normal"}, "fillOpacity": 30}}, "overrides": []},
+          "fieldConfig": {"defaults": {"unit": "reqps", "custom": {"stacking": {"mode": "normal"}, "fillOpacity": 30}}, "overrides": [{"matcher": {"id": "byRegexp", "options": "^2..$"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]}, {"matcher": {"id": "byRegexp", "options": "^3..$"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "blue"}}]}, {"matcher": {"id": "byRegexp", "options": "^4..$"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}, {"matcher": {"id": "byRegexp", "options": "^5..$"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}]},
           "targets": [
             {"expr": "sum(rate(traefik_service_requests_total{service=~\"academix-prod-.*\"}[1m])) by (code)", "legendFormat": "{{code}}"}
           ]
