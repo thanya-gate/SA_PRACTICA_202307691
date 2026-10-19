@@ -33,6 +33,13 @@ export class CredencialesEnMemoria implements CredencialesRepositorio {
     return this.credenciales.get(codigo) ?? null;
   }
 
+  async listarPorTitular(titular: string): Promise<Credencial[]> {
+    const buscado = titular.trim().toLowerCase();
+    return [...this.credenciales.values()]
+      .filter((c) => c.titular.trim().toLowerCase() === buscado)
+      .sort((a, b) => b.emitidoEn.localeCompare(a.emitidoEn));
+  }
+
   async registrar(emision: EmisionPendiente): Promise<{ registrada: boolean; yaExistia: boolean }> {
     const yaExistia = this.credenciales.has(emision.codigo);
     if (!yaExistia) {
