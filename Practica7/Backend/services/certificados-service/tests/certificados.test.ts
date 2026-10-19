@@ -307,3 +307,34 @@ describe('API HTTP de credenciales', () => {
     expect(res.body.estado).toBe('degradado');
   });
 });
+
+describe('Billetera: credenciales por titular', () => {
+  it('lista las credenciales del titular sin importar mayusculas y sin auditar', async () => {
+    const { repositorio, servicio } = armar();
+    const firma = firmarPase('CERT-2026-000200', 'EVT-1', CLAVE);
+    repositorio.sembrar([
+      { codigo: 'CERT-2026-000200', titular: 'Ana Pérez', eventoId: 'EVT-1', firma, emitidoEn: '2026-10-01T00:00:00.000Z' },
+      { codigo: 'CERT-2026-000201', titular: 'ana pérez ', eventoId: 'EVT-1', firma: 'alterada', emitidoEn: '2026-10-02T00:00:00.000Z' },
+      { codigo: 'CERT-2026-000202', titular: 'Otro Estudiante' },
+    ]);
+
+    const lista = await servicio.listarPorTitular('Ana Pérez');
+
+    expect(lista.map((v) => v.codigo)).toEqual(['CERT-2026-000201', 'CERT-2026-000200']);
+    expect(lista.map((v) => v.estado)).toEqual([EstadoCredencial.INVALIDA, EstadoCredencial.VALIDA]);
+    expect(repositorio.auditoria).toHaveLength(0);
+    expect(await servicio.listarPorTitular('  ')).toEqual([]);
+  });
+
+  it('GET /api/certificados/credenciales devuelve el estado como enum y texto', async () => {
+    const { repositorio, servicio } = armar();
+    repositorio.sembrar([{ codigo: 'CERT-2026-000300', titular: 'Ana Pérez', eventoId: 'EVT-1', firma: firmarPase('CERT-2026-000300', 'EVT-1', CLAVE) }]);
+    const http = crearAplicacionHttp(servicio, { version: '2.0.0', origenesPermitidos: [], postgres: repositorio });
+
+    const res = await request(http).get('/api/certificados/credenciales').query({ titular: 'Ana Pérez' }).expect(200);
+
+    expect(res.body.credenciales).toEqual([
+      expect.objectContaining({ codigo: 'CERT-2026-000300', estado: 1, estadoTexto: 'VALIDA' }),
+    ]);
+  });
+});

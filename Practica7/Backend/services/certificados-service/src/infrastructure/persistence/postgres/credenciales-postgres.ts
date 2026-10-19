@@ -52,6 +52,18 @@ export class PostgresCredenciales implements CredencialesRepositorio {
     return fila ? aCredencial(fila) : null;
   }
 
+  async listarPorTitular(titular: string): Promise<Credencial[]> {
+    const { rows } = await this.pool.query<FilaCredencial>(
+      `SELECT codigo, titulo, titular, evento_id, firma, emitido_en, revocada, verificaciones
+         FROM credencial
+        WHERE lower(trim(titular)) = lower(trim($1))
+        ORDER BY emitido_en DESC
+        LIMIT 100`,
+      [titular],
+    );
+    return rows.map(aCredencial);
+  }
+
   async registrar(emision: EmisionPendiente): Promise<{ registrada: boolean; yaExistia: boolean }> {
     const { rows } = await this.pool.query<{ registrada: boolean; ya_existia: boolean }>(
       'SELECT registrada, ya_existia FROM fn_registrar_credencial($1, $2, $3, $4, $5, $6::uuid)',

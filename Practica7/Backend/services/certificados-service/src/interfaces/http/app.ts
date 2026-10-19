@@ -82,6 +82,14 @@ export function crearAplicacionHttp(
     });
   });
 
+  // Billetera universitaria (YoUSAC): credenciales emitidas a un titular.
+  app.get('/api/certificados/credenciales', async (req, res) => {
+    const credenciales = await servicio.listarPorTitular(String(req.query.titular ?? ''));
+    res.json({
+      credenciales: credenciales.map((v) => ({ ...v, estado: ESTADO_A_NUMERO[v.estado], estadoTexto: v.estado })),
+    });
+  });
+
   app.get('/api/certificados/resumen', async (_req, res) => {
     res.json(await servicio.resumen());
   });

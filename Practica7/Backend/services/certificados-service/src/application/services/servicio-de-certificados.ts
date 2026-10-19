@@ -52,6 +52,17 @@ export class ServicioDeCertificados {
     return verificacion;
   }
 
+  /**
+   * Billetera del estudiante (YoUSAC): sus credenciales con el estado de
+   * verificacion ya evaluado. No suma a la auditoria: no es un intento de
+   * verificar un codigo ajeno, sino consultar las propias.
+   */
+  async listarPorTitular(titular: string): Promise<Verificacion[]> {
+    if (!titular.trim()) return [];
+    const credenciales = await this.repositorio.listarPorTitular(titular);
+    return credenciales.map((c) => evaluarCredencial(c, c.codigo, true, this.claveSecreta));
+  }
+
   /** Registra la emision que el worker realizo al confirmar la reserva. */
   async registrarEmision(emision: EmisionPendiente): Promise<{ registrada: boolean; yaExistia: boolean }> {
     if (!emision.codigo.trim() || !emision.titular.trim()) {
