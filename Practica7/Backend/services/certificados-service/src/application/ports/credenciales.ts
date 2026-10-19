@@ -9,6 +9,7 @@ import type { Credencial, EmisionPendiente } from '../../domain/credencial';
 
 export interface CredencialesRepositorio {
   buscar(codigo: string): Promise<Credencial | null>;
+  listarPorTitular(titular: string): Promise<Credencial[]>;
   registrar(emision: EmisionPendiente): Promise<{ registrada: boolean; yaExistia: boolean }>;
   registrarVerificacion(codigo: string, resultado: string): Promise<void>;
   contar(): Promise<number>;
