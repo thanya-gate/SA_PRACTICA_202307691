@@ -15,7 +15,7 @@ images:
   - name: ghcr.io/thanya-gate/academix/catalogo-service
     newTag: "4.0.0"
   - name: ghcr.io/thanya-gate/academix/certificados-service
-    newTag: "4.0.0"
+    newTag: "4.1.0"
   - name: ghcr.io/thanya-gate/academix/reservas-service
     newTag: "4.0.0"
   - name: ghcr.io/thanya-gate/academix/reservation-worker
