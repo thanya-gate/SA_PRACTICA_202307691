@@ -12,7 +12,7 @@ El cambio central respecto a la Práctica 9 es el mecanismo de obtención de im�
 |---|---|---|
 | `catalogo-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/catalogo-service:4.0.0` |
 | `reservas-service` (ticketing) | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/reservas-service:4.0.0` |
-| `certificados-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/certificados-service:4.0.0` |
+| `certificados-service` | Deployment + ClusterIP | `ghcr.io/thanya-gate/academix/certificados-service:4.1.0` |
 | `reservation-worker` | Deployment | `ghcr.io/thanya-gate/academix/reservation-worker:4.0.0` |
 | `rabbitmq` (broker) | StatefulSet + Service headless | `rabbitmq:3.13-management-alpine` |
 | `redis` (caché) | StatefulSet + ClusterIP | `redis:7-alpine` |
@@ -44,7 +44,7 @@ Practica10/deploy/kubernetes/
   (`ghcr.io/thanya-gate/academix/<servicio>:<tag>`). Los paquetes son **públicos**,
   así que K3s las descarga sin credenciales adicionales.
 
-> **Nota sobre el tag:** se despliega la imagen **`4.0.0`**, publicada por el CI al crear el tag Git `V4.0.0` (entrega de la Práctica 10; `V3.0.0` corresponde a la Práctica 9). Para otra versión basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar).
+> **Nota sobre el tag:** se despliega la imagen **`4.0.0`**, publicada por el CI al crear el tag Git `V4.0.0` (entrega de la Práctica 10; `V3.0.0` corresponde a la Práctica 9). `certificados-service` usa **`4.1.0`** (tag `V4.1.0`), que agrega el endpoint de billetera que consume YoUSAC. Para otra versión basta con cambiar `newTag` en `kustomization.yaml` (un solo lugar).
 
 ## Procedimiento
 
